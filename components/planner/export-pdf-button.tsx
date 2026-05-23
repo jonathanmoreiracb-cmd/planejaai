@@ -269,28 +269,38 @@ export function ExportPDFButton({
         rgb(0.388, 0.4, 0.945),
         20
       );
-      plan.desenvolvimento.forEach((d) => {
+      (plan.desenvolvimento || []).forEach((d) => {
+        if (!d) return;
+
+        // 1. Draw Stage and duration title
         addText(
-          `${d.etapa} (${d.tempo}) - Metodologia: ${d.tipo}`,
+          `${d.etapa || "Desenvolvimento"} (${d.tempo || "15 minutos"})`,
           50,
           10,
           HelveticaBold,
           rgb(0.1, 0.1, 0.2),
-          15
+          14
         );
-        const wrappedAct = wrapText(d.atividade, 75);
+
+        // 2. Draw Methodology (wrapped to make sure it never overflows)
+        const tipoText = `Metodologia: ${d.tipo || ""}`;
+        const wrappedTipo = wrapText(tipoText, 75);
+        wrappedTipo.forEach((line) => {
+          addText(line, 60, 9, Helvetica, rgb(0.4, 0.4, 0.4), 13);
+        });
+
+        // 3. Draw Detailed Activity (wrapped)
+        const wrappedAct = wrapText(d.atividade || "", 75);
         wrappedAct.forEach((line) => {
           addText(line, 60, 9.5, Helvetica, rgb(0.25, 0.25, 0.25), 13);
         });
+
+        // 4. Draw Mediation Tip (wrapped to make sure it never overflows)
         if (d.observacao) {
-          addText(
-            `Dica: ${d.observacao}`,
-            60,
-            9,
-            Helvetica,
-            rgb(0.4, 0.4, 0.6),
-            13
-          );
+          const wrappedObs = wrapText(`Dica: ${d.observacao}`, 75);
+          wrappedObs.forEach((line) => {
+            addText(line, 60, 9, Helvetica, rgb(0.4, 0.4, 0.6), 13);
+          });
         }
         yOffset -= 8;
       });
