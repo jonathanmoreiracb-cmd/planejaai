@@ -25,7 +25,7 @@ Adicione as seguintes opções conforme solicitadas:
 - Incluir avaliação formativa: {incluir_avaliacao}
 REGRAS OBRIGATÓRIAS DE JSON (CRÍTICO - NÃO IGNORE):
 1. O retorno deve ser UNICAMENTE o objeto JSON válido, sem qualquer introdução ou conclusão.
-2. NUNCA utilize aspas duplas normais (") dentro dos campos de texto (como falas, diálogos ou nomes de jogos). Use aspas simples (') ou faça o escape correto (\\\"). Exemplo: "O professor dirá 'Muito bem!'..." ou "O professor dirá \\\"Muito bem!\\\"...".
+2. ABSOLUTELY NEVER USE DOUBLE QUOTES (") inside JSON string values, descriptions, or observations. If you need to cite a dialogue, name, rule, game, or anything else, ALWAYS use single quotes ('). Under no circumstances should the double quote character (") appear inside any text field in your JSON.
 3. Garanta a correta abertura e fechamento de todas as chaves/colchetes e NUNCA deixe vírgulas extras no final de arrays ou objetos (trailing commas).
 
 ESTRUTURA OBRIGATÓRIA (retorne UNICAMENTE em JSON válido, sem texto explicativo antes ou depois):
@@ -122,7 +122,7 @@ Aplique o estilo: "{estilo_solicitado}"
 
 REGRAS OBRIGATÓRIAS DE JSON:
 - Retorne APENAS o JSON válido para este bloco específico, sem texto explicativo antes ou depois.
-- NUNCA use aspas duplas (") dentro das chaves ou strings do JSON (como falas ou observações). Use aspas simples (') ou escape corretamente (\\\").
+- ABSOLUTELY NEVER USE DOUBLE QUOTES (") inside JSON string values, descriptions, or observations. If you need to cite a dialogue, name, rule, game, or anything else, ALWAYS use single quotes ('). Under no circumstances should the double quote character (") appear inside any text field in your JSON.
 
 ESTRUTURA DE RETORNO OBRIGATÓRIA:
 {
@@ -144,7 +144,7 @@ Leve em consideração a realidade da turma:
 
 REGRAS OBRIGATÓRIAS DE JSON:
 - Retorne UNICAMENTE o JSON válido para a folha de exercícios, sem texto explicativo antes ou depois.
-- NUNCA use aspas duplas (") dentro dos enunciados de perguntas ou instruções. Use aspas simples (') ou escape corretamente (\\\").
+- ABSOLUTELY NEVER USE DOUBLE QUOTES (") inside JSON string values, questions, or descriptions. If you need to cite anything, ALWAYS use single quotes ('). Under no circumstances should the double quote character (") appear inside any text field in your JSON.
 
 ESTRUTURA DE RETORNO OBRIGATÓRIA:
 {
