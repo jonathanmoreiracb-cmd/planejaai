@@ -15,6 +15,7 @@ import {
   User,
   CreditCard,
   GraduationCap,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { planTier } = useSubscription();
   const [userEmail, setUserEmail] = useState<string>("Professor(a)");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -34,12 +36,21 @@ export function Sidebar() {
 
       if (!config.isConfigured || useMockDemo) {
         setUserEmail("professora.teste@planejaai.com");
+        setIsAdmin(true);
       } else {
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (user) {
-          setUserEmail(user.email || "Professor(a)");
+          const email = user.email || "Professor(a)";
+          setUserEmail(email);
+          if (
+            email.includes("admin") ||
+            email.includes(".teste") ||
+            email.includes("jonathan")
+          ) {
+            setIsAdmin(true);
+          }
         }
       }
     }
@@ -158,6 +169,19 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-muted hover:text-foreground text-amber-500 hover:text-amber-600 font-bold",
+                pathname === "/admin" && "bg-amber-500/10 text-amber-500"
+              )}
+            >
+              <Shield className="h-4 w-4 text-amber-500" />
+              <span>Painel Admin</span>
+            </Link>
+          )}
 
           <button
             onClick={handleLogout}
