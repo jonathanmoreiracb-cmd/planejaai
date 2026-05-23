@@ -1,22 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-const isConfigured =
-  supabaseUrl &&
-  supabaseUrl.startsWith("http") &&
-  supabaseUrl !== "xxx" &&
-  supabaseServiceRoleKey &&
-  supabaseServiceRoleKey !== "xxx";
-
-const supabaseAdmin = createClient(
-  isConfigured ? supabaseUrl : "https://placeholder-url.supabase.co",
-  isConfigured
-    ? supabaseServiceRoleKey
-    : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder"
-);
+// Force Next.js to treat this route as fully dynamic on every request
+export const dynamic = "force-dynamic";
 
 const verifyAdminPassword = (req: Request): boolean => {
   const headerPassword = req.headers.get("x-admin-password");
@@ -33,6 +19,19 @@ export async function GET(req: Request) {
       );
     }
 
+    // Read environment variables dynamically at request runtime to bypass build-time static caching
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+    const isConfigured =
+      supabaseUrl &&
+      supabaseUrl.startsWith("http") &&
+      supabaseUrl !== "xxx" &&
+      supabaseServiceRoleKey &&
+      supabaseServiceRoleKey !== "xxx" &&
+      supabaseServiceRoleKey !== "undefined" &&
+      supabaseServiceRoleKey !== "null";
+
     if (!isConfigured) {
       return NextResponse.json(
         {
@@ -43,6 +42,14 @@ export async function GET(req: Request) {
       );
     }
 
+    // Initialize Supabase Admin client dynamically
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
     // 1. Fetch Auth Users using service role client
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.listUsers();
@@ -52,7 +59,7 @@ export async function GET(req: Request) {
         {
           error: `Falha ao obter lista de usuários do Supabase Auth: ${
             authError?.message || "Erro desconhecido"
-          }. Verifique as permissões da sua Service Role Key.`,
+          }. Verifique se a sua Service Role Key está correta no painel da Vercel.`,
         },
         { status: 500 }
       );
@@ -170,6 +177,18 @@ export async function POST(req: Request) {
       );
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+    const isConfigured =
+      supabaseUrl &&
+      supabaseUrl.startsWith("http") &&
+      supabaseUrl !== "xxx" &&
+      supabaseServiceRoleKey &&
+      supabaseServiceRoleKey !== "xxx" &&
+      supabaseServiceRoleKey !== "undefined" &&
+      supabaseServiceRoleKey !== "null";
+
     if (!isConfigured) {
       return NextResponse.json(
         {
@@ -179,6 +198,13 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // Try upserting or updating the subscriptions record using service role client
     const { error } = await supabaseAdmin.from("subscriptions").upsert(
