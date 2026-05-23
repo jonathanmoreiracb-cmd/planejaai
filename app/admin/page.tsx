@@ -76,6 +76,7 @@ export default function AdminDashboard() {
   const [searchPlanQuery, setSearchPlanQuery] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<"users" | "plans">("users");
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const [toastMessage, setToastMessage] = useState<{
     title: string;
@@ -113,9 +114,11 @@ export default function AdminDashboard() {
 
       const data = await res.json();
       if (data.error) {
+        setServerError(data.error);
         throw new Error(data.error);
       }
 
+      setServerError(null);
       setUsers(data.users || []);
       setPlans(data.plans || []);
       setStats(
@@ -316,6 +319,83 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {serverError && (
+        <Card className="border-red-500/20 bg-red-500/5 rounded-2xl p-6 flex items-start gap-4 animate-in fade-in duration-300">
+          <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+          <div className="space-y-2 text-left">
+            <h3 className="font-black text-sm uppercase text-red-500">
+              Erro de Configuração das Chaves
+            </h3>
+            <p className="text-xs font-bold text-foreground/80">
+              {serverError}
+            </p>
+            <div className="text-xs font-bold text-muted-foreground/90 mt-2 bg-background/50 p-4 rounded-xl border border-border/40 space-y-2.5">
+              <p className="text-foreground font-extrabold uppercase text-[10px]">
+                Como resolver no painel da Vercel:
+              </p>
+              <ol className="list-decimal pl-4 space-y-1.5 leading-relaxed">
+                <li>
+                  Acesse o seu dashboard da{" "}
+                  <span className="font-extrabold text-foreground">Vercel</span>
+                  .
+                </li>
+                <li>
+                  Abra o seu projeto{" "}
+                  <span className="font-extrabold text-foreground">
+                    PlanejaAI
+                  </span>
+                  .
+                </li>
+                <li>
+                  Vá na aba{" "}
+                  <span className="font-extrabold text-foreground">
+                    Settings ➔ Environment Variables
+                  </span>
+                  .
+                </li>
+                <li>
+                  Adicione a variável de ambiente:
+                  <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                    <li>
+                      <span className="font-mono text-primary font-black">
+                        Key:
+                      </span>{" "}
+                      <code className="bg-muted px-1.5 py-0.5 rounded">
+                        SUPABASE_SERVICE_ROLE_KEY
+                      </code>
+                    </li>
+                    <li>
+                      <span className="font-mono text-primary font-black">
+                        Value:
+                      </span>{" "}
+                      (Sua chave secreta do Supabase, encontrada em Settings ➔
+                      API ➔{" "}
+                      <code className="bg-muted px-1.5 py-0.5 rounded">
+                        service_role
+                      </code>{" "}
+                      /{" "}
+                      <code className="bg-muted px-1.5 py-0.5 rounded">
+                        secret
+                      </code>
+                      )
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  Clique em{" "}
+                  <span className="font-extrabold text-foreground">Save</span> e
+                  realize um novo{" "}
+                  <span className="font-extrabold text-foreground">
+                    Redeploy
+                  </span>{" "}
+                  do projeto para aplicar as alterações!
+                </li>
+              </ol>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Grid of Analytical Metrics */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
