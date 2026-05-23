@@ -22,14 +22,46 @@ export function useSubscription() {
     async function loadSubscription() {
       setIsLoading(true);
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { getSupabaseConfig } = await import("@/lib/supabase/client");
+        const config = getSupabaseConfig();
+        const useMockDemo =
+          typeof window !== "undefined" &&
+          (localStorage.getItem("use_mock_demo") === "true" ||
+            document.cookie.includes("use_mock_demo=true"));
 
-        if (!user) {
+        let activeUser = null;
+        if (!config.isConfigured || useMockDemo) {
+          activeUser = {
+            id: "mock-user-id-teacher",
+            email: "professora.teste@planejaai.com",
+          };
+        } else {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          activeUser = user;
+        }
+
+        if (!activeUser) {
           if (active) {
             setSubscription(null);
             setIsLoading(false);
+          }
+          return;
+        }
+
+        if (!config.isConfigured || useMockDemo) {
+          if (active) {
+            setSubscription({
+              id: "sub-mock-pro",
+              user_id: activeUser.id,
+              status: "active",
+              plan_tier: "pro",
+              current_period_end: new Date(
+                Date.now() + 30 * 86400000
+              ).toISOString(),
+            });
+            setMonthlyPlanCount(2);
           }
           return;
         }
@@ -38,7 +70,7 @@ export function useSubscription() {
         const { data: subData, error: subErr } = await supabase
           .from("subscriptions")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", activeUser.id)
           .maybeSingle();
 
         // 2. Count monthly generated lesson plans
@@ -52,7 +84,7 @@ export function useSubscription() {
         const { count, error: countErr } = await supabase
           .from("lesson_plans")
           .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id)
+          .eq("user_id", activeUser.id)
           .gte("created_at", startOfMonth);
 
         if (active) {
@@ -68,7 +100,7 @@ export function useSubscription() {
             // Default Free Tier
             setSubscription({
               id: "free",
-              user_id: user.id,
+              user_id: activeUser.id,
               status: "active",
               plan_tier: "free",
               current_period_end: null,

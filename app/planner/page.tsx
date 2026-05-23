@@ -43,26 +43,46 @@ export default function PlannerPage() {
       const reopenId = searchParams.get("reopen");
       const duplicateId = searchParams.get("duplicate");
 
+      const useMockDemo =
+        typeof window !== "undefined" &&
+        (localStorage.getItem("use_mock_demo") === "true" ||
+          document.cookie.includes("use_mock_demo=true"));
+
       if (reopenId) {
         setIsLoading(true);
         setError(null);
         try {
-          const { data, error: fetchErr } = await supabase
-            .from("lesson_plans")
-            .select("*")
-            .eq("id", reopenId)
-            .single();
+          let planToReopen = null;
 
-          if (fetchErr || !data)
-            throw new Error("Plano de aula nao encontrado no historico.");
+          if (useMockDemo) {
+            const localPlansStr =
+              localStorage.getItem("mock_lesson_plans") || "[]";
+            const localPlans = JSON.parse(localPlansStr);
+            planToReopen = localPlans.find((p: any) => p.id === reopenId);
+            if (!planToReopen) {
+              throw new Error(
+                "Plano de aula nao encontrado no historico local."
+              );
+            }
+          } else {
+            const { data, error: fetchErr } = await supabase
+              .from("lesson_plans")
+              .select("*")
+              .eq("id", reopenId)
+              .single();
+
+            if (fetchErr || !data)
+              throw new Error("Plano de aula nao encontrado no historico.");
+            planToReopen = data;
+          }
 
           setQueryParams({
-            tema: data.theme,
-            disciplina: data.subject,
-            ano: data.grade,
-            tempo: data.duration,
+            tema: planToReopen.theme,
+            disciplina: planToReopen.subject,
+            ano: planToReopen.grade,
+            tempo: planToReopen.duration,
           });
-          setGeneratedPlan(data.plan_data);
+          setGeneratedPlan(planToReopen.plan_data);
         } catch (err: any) {
           setError(err.message || "Erro ao reabrir plano de aula.");
         } finally {
@@ -72,20 +92,35 @@ export default function PlannerPage() {
         setIsLoading(true);
         setError(null);
         try {
-          const { data, error: fetchErr } = await supabase
-            .from("lesson_plans")
-            .select("*")
-            .eq("id", duplicateId)
-            .single();
+          let planToDuplicate = null;
 
-          if (fetchErr || !data)
-            throw new Error("Plano de aula nao encontrado para duplicar.");
+          if (useMockDemo) {
+            const localPlansStr =
+              localStorage.getItem("mock_lesson_plans") || "[]";
+            const localPlans = JSON.parse(localPlansStr);
+            planToDuplicate = localPlans.find((p: any) => p.id === duplicateId);
+            if (!planToDuplicate) {
+              throw new Error(
+                "Plano de aula nao encontrado no historico local."
+              );
+            }
+          } else {
+            const { data, error: fetchErr } = await supabase
+              .from("lesson_plans")
+              .select("*")
+              .eq("id", duplicateId)
+              .single();
+
+            if (fetchErr || !data)
+              throw new Error("Plano de aula nao encontrado para duplicar.");
+            planToDuplicate = data;
+          }
 
           setInitialFormValues({
-            tema: `${data.theme} (Copia)`,
-            disciplina: data.subject,
-            ano: data.grade,
-            tempo: data.duration,
+            tema: `${planToDuplicate.theme} (Copia)`,
+            disciplina: planToDuplicate.subject,
+            ano: planToDuplicate.grade,
+            tempo: planToDuplicate.duration,
           });
         } catch (err: any) {
           setError(err.message || "Erro ao carregar copia do plano de aula.");
@@ -157,19 +192,50 @@ export default function PlannerPage() {
       if (data.plan) {
         setGeneratedPlan(data.plan);
         try {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.from("lesson_plans").insert({
-              user_id: user.id,
+          const useMockDemo =
+            typeof window !== "undefined" &&
+            (localStorage.getItem("use_mock_demo") === "true" ||
+              document.cookie.includes("use_mock_demo=true"));
+
+          if (useMockDemo) {
+            // Save to browser localStorage simulating database
+            const localPlansStr =
+              localStorage.getItem("mock_lesson_plans") || "[]";
+            const localPlans = JSON.parse(localPlansStr);
+            const newPlan = {
+              id: `plan-mock-${Date.now()}`,
+              user_id: "mock-user-id-teacher",
               title: data.plan.titulo,
               theme: formData.tema,
               subject: formData.disciplina,
               grade: formData.ano,
               duration: formData.tempo,
               plan_data: data.plan,
-            });
+              created_at: new Date().toISOString(),
+            };
+            localPlans.unshift(newPlan);
+            localStorage.setItem(
+              "mock_lesson_plans",
+              JSON.stringify(localPlans)
+            );
+            console.log(
+              "Plano salvo com sucesso no LocalStorage do visitante!"
+            );
+          } else {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            if (user) {
+              await supabase.from("lesson_plans").insert({
+                user_id: user.id,
+                title: data.plan.titulo,
+                theme: formData.tema,
+                subject: formData.disciplina,
+                grade: formData.ano,
+                duration: formData.tempo,
+                plan_data: data.plan,
+              });
+            }
           }
         } catch (saveErr) {
           console.error(

@@ -35,6 +35,7 @@ const GeneratePlanSchema = z.object({
   disciplina: z.string().min(1, "Selecione uma disciplina"),
   ano: z.string().min(1, "Selecione o ano escolar"),
   tempo: z.string().min(1, "Selecione a duração recomendada"),
+  necessidadeEspecial: z.string().default("regular"),
   incluirPratica: z.boolean().default(false),
   incluirAvaliacao: z.boolean().default(false),
   incluirTarefa: z.boolean().default(false),
@@ -50,6 +51,7 @@ interface PlanGeneratorProps {
     disciplina: string;
     ano: string;
     tempo: string;
+    necessidadeEspecial?: string;
     incluirPratica?: boolean;
     incluirAvaliacao?: boolean;
     incluirTarefa?: boolean;
@@ -67,19 +69,29 @@ export function PlanGenerator({
     setValue,
     watch,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<any>({
-    resolver: zodResolver(GeneratePlanSchema),
     defaultValues: {
       tema: initialValues?.tema || "",
       disciplina: initialValues?.disciplina || undefined,
       ano: initialValues?.ano || undefined,
       tempo: initialValues?.tempo || undefined,
+      necessidadeEspecial: initialValues?.necessidadeEspecial || "regular",
       incluirPratica: initialValues?.incluirPratica || false,
       incluirAvaliacao: initialValues?.incluirAvaliacao || false,
       incluirTarefa: initialValues?.incluirTarefa || false,
     },
   });
+
+  // Registra manualmente os campos dos dropdowns personalizados do Select
+  useEffect(() => {
+    register("disciplina");
+    register("ano");
+    register("tempo");
+    register("necessidadeEspecial");
+  }, [register]);
 
   // Keep react-hook-form inputs reactive to asynchronously loaded initialValues
   useEffect(() => {
@@ -89,6 +101,7 @@ export function PlanGenerator({
         disciplina: initialValues.disciplina || undefined,
         ano: initialValues.ano || undefined,
         tempo: initialValues.tempo || undefined,
+        necessidadeEspecial: initialValues.necessidadeEspecial || "regular",
         incluirPratica: initialValues.incluirPratica || false,
         incluirAvaliacao: initialValues.incluirAvaliacao || false,
         incluirTarefa: initialValues.incluirTarefa || false,
@@ -99,8 +112,43 @@ export function PlanGenerator({
   const disciplinaValue = watch("disciplina");
   const anoValue = watch("ano");
   const tempoValue = watch("tempo");
+  const necessidadeEspecialValue = watch("necessidadeEspecial");
 
-  const onSubmit = (data: GeneratePlanInput) => {
+  const onSubmit = (data: any) => {
+    clearErrors();
+    let hasError = false;
+
+    if (!data.tema || data.tema.trim().length < 3) {
+      setError("tema", {
+        type: "manual",
+        message: "O tema deve ter pelo menos 3 caracteres",
+      });
+      hasError = true;
+    }
+    if (!data.disciplina) {
+      setError("disciplina", {
+        type: "manual",
+        message: "Selecione uma disciplina",
+      });
+      hasError = true;
+    }
+    if (!data.ano) {
+      setError("ano", {
+        type: "manual",
+        message: "Selecione o ano escolar",
+      });
+      hasError = true;
+    }
+    if (!data.tempo) {
+      setError("tempo", {
+        type: "manual",
+        message: "Selecione a duração recomendada",
+      });
+      hasError = true;
+    }
+
+    if (hasError) return;
+
     onGenerate(data);
   };
 
@@ -131,6 +179,20 @@ export function PlanGenerator({
 
   const tempos = ["45min", "90min", "2 aulas de 45min"];
 
+  const necessidadesEspeciais = [
+    { value: "regular", label: "Nenhuma (Plano de Aula Regular)" },
+    { value: "tdah", label: "TDAH (Déficit de Atenção/Hiperatividade)" },
+    {
+      value: "autismo",
+      label: "Autismo / TEA (Transtorno do Espectro Autista)",
+    },
+    { value: "dislexia", label: "Dislexia e Transtornos de Leitura" },
+    { value: "visual", label: "Deficiência Visual (Cegueira ou Baixa Visão)" },
+    { value: "auditiva", label: "Deficiência Auditiva / Surdez" },
+    { value: "intelectual", label: "Deficiência Intelectual / Cognitiva" },
+    { value: "superdotacao", label: "Altas Habilidades / Superdotação" },
+  ];
+
   return (
     <Card className="border-border bg-card shadow-2xl relative overflow-hidden rounded-2xl">
       <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-secondary" />
@@ -150,6 +212,24 @@ export function PlanGenerator({
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-5">
+          {/* Debug/Diagnostic area for form errors */}
+          {Object.keys(errors).length > 0 && (
+            <div className="p-3.5 rounded-xl bg-red-500/5 border border-red-500/15 text-xs text-red-500 font-semibold space-y-1.5 animate-in fade-in duration-300">
+              <p className="font-black uppercase tracking-wider text-[10px] text-red-600 mb-1">
+                Erros de Validação Detectados:
+              </p>
+              {Object.entries(errors).map(([key, err]: any) => (
+                <p key={key} className="flex items-center gap-1.5">
+                  <span>•</span>
+                  <span>
+                    Campo <strong className="underline">{key}</strong>:{" "}
+                    {err.message || "Valor inválido ou ausente."}
+                  </span>
+                </p>
+              ))}
+            </div>
+          )}
+
           {/* Tema da Aula */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-foreground uppercase tracking-wider block">
@@ -252,6 +332,32 @@ export function PlanGenerator({
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Necessidades Especiais (Inclusão Escolar) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground uppercase tracking-wider block flex items-center gap-1.5">
+              <span>Necessidades Especiais (Foco em Inclusão Pedagógica)</span>
+              <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">
+                Inclusivo
+              </span>
+            </label>
+            <Select
+              value={necessidadeEspecialValue}
+              onValueChange={(val) => setValue("necessidadeEspecial", val)}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="h-11 rounded-xl bg-background/50 border-border">
+                <SelectValue placeholder="Selecione caso haja foco em inclusão escolar..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {necessidadesEspeciais.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Checkboxes Options */}

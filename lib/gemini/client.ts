@@ -8,8 +8,8 @@ export const genAI = new GoogleGenerativeAI(
   isConfigured ? apiKey : "AIzaSyPlaceholder-Key"
 );
 
-// We use the recommended gemini-1.5-pro or gemini-2.0-flash models for advanced structured JSON reasoning
-export const getGeminiModel = (modelName = "gemini-1.5-pro-latest") => {
+// We use the recommended gemini-2.5-flash models for advanced structured JSON reasoning
+export const getGeminiModel = (modelName = "gemini-2.5-flash") => {
   return genAI.getGenerativeModel({ model: modelName });
 };
 

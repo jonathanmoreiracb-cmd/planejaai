@@ -25,11 +25,22 @@ export function Sidebar() {
 
   useEffect(() => {
     async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email || "Professor(a)");
+      const { getSupabaseConfig } = await import("@/lib/supabase/client");
+      const config = getSupabaseConfig();
+      const useMockDemo =
+        typeof window !== "undefined" &&
+        (localStorage.getItem("use_mock_demo") === "true" ||
+          document.cookie.includes("use_mock_demo=true"));
+
+      if (!config.isConfigured || useMockDemo) {
+        setUserEmail("professora.teste@planejaai.com");
+      } else {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          setUserEmail(user.email || "Professor(a)");
+        }
       }
     }
     loadUser();
@@ -49,7 +60,16 @@ export function Sidebar() {
   const initials = userEmail.split("@")[0].slice(0, 2).toUpperCase();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("use_mock_demo");
+      document.cookie =
+        "use_mock_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    }
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error(e);
+    }
     window.location.href = "/login";
   };
 

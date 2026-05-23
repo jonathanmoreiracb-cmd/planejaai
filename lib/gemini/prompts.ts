@@ -23,7 +23,10 @@ Gerar um plano de aula completo sobre o tema "{tema}" para a disciplina "{discip
 Adicione as seguintes opções conforme solicitadas:
 - Incluir atividade prática: {incluir_pratica}
 - Incluir avaliação formativa: {incluir_avaliacao}
-- Incluir tarefa de casa: {incluir_tarefa}
+REGRAS OBRIGATÓRIAS DE JSON (CRÍTICO - NÃO IGNORE):
+1. O retorno deve ser UNICAMENTE o objeto JSON válido, sem qualquer introdução ou conclusão.
+2. NUNCA utilize aspas duplas normais (") dentro dos campos de texto (como falas, diálogos ou nomes de jogos). Use aspas simples (') ou faça o escape correto (\\\"). Exemplo: "O professor dirá 'Muito bem!'..." ou "O professor dirá \\\"Muito bem!\\\"...".
+3. Garanta a correta abertura e fechamento de todas as chaves/colchetes e NUNCA deixe vírgulas extras no final de arrays ou objetos (trailing commas).
 
 ESTRUTURA OBRIGATÓRIA (retorne UNICAMENTE em JSON válido, sem texto explicativo antes ou depois):
 {
@@ -117,7 +120,11 @@ Aplique o estilo: "{estilo_solicitado}"
   - Se "Para ambiente fechado" → planeje a atividade para ser executada inteiramente dentro da sala de aula tradicional (sentados ou em pequenos grupos).
   - Se "Sem tecnologia" → substitua qualquer projetor, computador, slides ou internet por materiais manuais e orais tradicionais.
 
-ESTRUTURA DE RETORNO OBRIGATÓRIA (Retorne APENAS o JSON válido para este bloco específico, sem texto explicativo antes ou depois):
+REGRAS OBRIGATÓRIAS DE JSON:
+- Retorne APENAS o JSON válido para este bloco específico, sem texto explicativo antes ou depois.
+- NUNCA use aspas duplas (") dentro das chaves ou strings do JSON (como falas ou observações). Use aspas simples (') ou escape corretamente (\\\").
+
+ESTRUTURA DE RETORNO OBRIGATÓRIA:
 {
   "etapa": "{etapa_nome}",
   "tempo": "{etapa_tempo}",
@@ -135,7 +142,11 @@ Leve em consideração a realidade da turma:
 - Nível de Alfabetização: {alfabetizacao}
 - Perfil e características dos alunos: {perfil_turma}
 
-ESTRUTURA DE RETORNO OBRIGATÓRIA (retorne UNICAMENTE em JSON válido, sem qualquer texto explicativo antes ou depois):
+REGRAS OBRIGATÓRIAS DE JSON:
+- Retorne UNICAMENTE o JSON válido para a folha de exercícios, sem texto explicativo antes ou depois.
+- NUNCA use aspas duplas (") dentro dos enunciados de perguntas ou instruções. Use aspas simples (') ou escape corretamente (\\\").
+
+ESTRUTURA DE RETORNO OBRIGATÓRIA:
 {
   "titulo": "Título cativante e lúdico para a folha de exercícios",
   "instrucoes": "Instruções claras e carinhosas para a realização da atividade pelos alunos.",

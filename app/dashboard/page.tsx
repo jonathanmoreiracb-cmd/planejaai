@@ -58,8 +58,13 @@ export default function DashboardPage() {
         const { getSupabaseConfig } = await import("@/lib/supabase/client");
         const config = getSupabaseConfig();
 
+        const useMockDemo =
+          typeof window !== "undefined" &&
+          (localStorage.getItem("use_mock_demo") === "true" ||
+            document.cookie.includes("use_mock_demo=true"));
+
         let activeUser = null;
-        if (!config.isConfigured) {
+        if (!config.isConfigured || useMockDemo) {
           activeUser = {
             email: "professora.teste@planejaai.com",
           };
@@ -73,32 +78,45 @@ export default function DashboardPage() {
         if (activeUser) {
           setUserEmail(activeUser.email || "Professor(a)");
 
-          if (!config.isConfigured) {
-            // Render simulated lesson plans in local demo mode
-            setPlans([
-              {
-                id: "plan-mock-1",
-                user_id: "mock-user-id",
-                title: "Alfabetização Lúdica e Jogos Silábicos",
-                theme: "Jogos com Letras e Sílabas Complexas",
-                subject: "Português",
-                grade: "1º ano EF",
-                duration: "45min",
-                plan_data: {},
-                created_at: new Date().toISOString(),
-              },
-              {
-                id: "plan-mock-2",
-                user_id: "mock-user-id",
-                title: "Explorando os Ciclos da Água na Natureza",
-                theme: "O Ciclo da Água e a Preservação Ambiental",
-                subject: "Ciências",
-                grade: "4º ano EF",
-                duration: "90min",
-                plan_data: {},
-                created_at: new Date(Date.now() - 86400000).toISOString(),
-              },
-            ]);
+          if (!config.isConfigured || useMockDemo) {
+            // Render simulated lesson plans in local demo mode, pulling from localStorage
+            let localPlans = [];
+            const localPlansStr = localStorage.getItem("mock_lesson_plans");
+
+            if (localPlansStr) {
+              localPlans = JSON.parse(localPlansStr);
+            } else {
+              // Seed default demo plans if empty
+              localPlans = [
+                {
+                  id: "plan-mock-1",
+                  user_id: "mock-user-id-teacher",
+                  title: "Alfabetização Lúdica e Jogos Silábicos",
+                  theme: "Jogos com Letras e Sílabas Complexas",
+                  subject: "Português",
+                  grade: "1º ano EF",
+                  duration: "45min",
+                  plan_data: {},
+                  created_at: new Date().toISOString(),
+                },
+                {
+                  id: "plan-mock-2",
+                  user_id: "mock-user-id-teacher",
+                  title: "Explorando os Ciclos da Água na Natureza",
+                  theme: "O Ciclo da Água e a Preservação Ambiental",
+                  subject: "Ciências",
+                  grade: "4º ano EF",
+                  duration: "90min",
+                  plan_data: {},
+                  created_at: new Date(Date.now() - 86400000).toISOString(),
+                },
+              ];
+              localStorage.setItem(
+                "mock_lesson_plans",
+                JSON.stringify(localPlans)
+              );
+            }
+            setPlans(localPlans);
           } else {
             const { data: lessonPlans, error: plansError } = await supabase
               .from("lesson_plans")
@@ -135,15 +153,27 @@ export default function DashboardPage() {
       return;
 
     try {
-      const { error: deleteErr } = await supabase
-        .from("lesson_plans")
-        .delete()
-        .eq("id", id);
+      const useMockDemo =
+        typeof window !== "undefined" &&
+        (localStorage.getItem("use_mock_demo") === "true" ||
+          document.cookie.includes("use_mock_demo=true"));
 
-      if (deleteErr) throw deleteErr;
+      if (useMockDemo) {
+        // Delete from local storage
+        const localPlansStr = localStorage.getItem("mock_lesson_plans") || "[]";
+        let localPlans = JSON.parse(localPlansStr);
+        localPlans = localPlans.filter((p: any) => p.id !== id);
+        localStorage.setItem("mock_lesson_plans", JSON.stringify(localPlans));
+        setPlans(localPlans);
+      } else {
+        const { error: deleteErr } = await supabase
+          .from("lesson_plans")
+          .delete()
+          .eq("id", id);
 
-      // Reactively filter out deleted plan from UI
-      setPlans((prev) => prev.filter((p) => p.id !== id));
+        if (deleteErr) throw deleteErr;
+        setPlans((prev) => prev.filter((p) => p.id !== id));
+      }
     } catch (err: any) {
       console.error(err);
       alert("Falha ao deletar o plano de aula do histórico.");

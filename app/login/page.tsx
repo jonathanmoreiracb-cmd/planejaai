@@ -108,6 +108,13 @@ export default function LoginPage() {
     }
   };
 
+  const handleDemoAccess = () => {
+    localStorage.setItem("use_mock_demo", "true");
+    document.cookie = "use_mock_demo=true; path=/; max-age=86400;"; // 1 dia
+    router.push("/dashboard");
+    router.refresh();
+  };
+
   return (
     <div className="flex-grow flex items-center justify-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-50/20 via-background to-background relative overflow-hidden min-h-[calc(100vh-64px)]">
       {/* Background glowing decorations */}
@@ -255,6 +262,26 @@ export default function LoginPage() {
                     <span>Continuar com Google</span>
                   </>
                 )}
+              </Button>
+
+              {/* Demo Mode / Guest Access */}
+              <div className="relative flex items-center justify-center my-1 w-full">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/60"></div>
+                </div>
+                <span className="relative px-3 text-[10px] uppercase font-bold text-muted-foreground bg-card">
+                  Ou experimente rápido
+                </span>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleDemoAccess}
+                className="w-full hover:bg-primary/5 hover:text-primary border border-dashed border-primary/25 hover:border-primary/40 font-extrabold h-11 rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                <Sparkles className="h-4 w-4 animate-pulse text-primary" />
+                <span>Entrar como Visitante (Modo Demo)</span>
               </Button>
 
               <p className="text-[11px] text-muted-foreground text-center pt-2">

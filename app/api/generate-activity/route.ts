@@ -17,9 +17,18 @@ export async function POST(req: NextRequest) {
 
     // 1. Fetch school context from Supabase for age/literacy adapted sheets
     const supabase = createClient();
+
+    const isMock = req.cookies.get("use_mock_demo")?.value === "true";
+
     const {
-      data: { user },
+      data: { user: authUser },
     } = await supabase.auth.getUser();
+
+    let user = authUser;
+
+    if (!user && isMock) {
+      user = { id: "mock-user-id-teacher" } as any;
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -28,14 +37,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check subscription plan tier
-    const { data: subData } = await supabase
-      .from("subscriptions")
-      .select("plan_tier")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    let planTier = "free";
 
-    const planTier = subData?.plan_tier || "free";
+    if (isMock) {
+      planTier = "pro"; // Demo users get mock Pro tier
+    } else {
+      // Check subscription plan tier
+      const { data: subData } = await supabase
+        .from("subscriptions")
+        .select("plan_tier")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      planTier = subData?.plan_tier || "free";
+    }
 
     if (planTier !== "pro" && planTier !== "escola") {
       return NextResponse.json(
@@ -51,7 +66,7 @@ export async function POST(req: NextRequest) {
     let classProfileText = "Turma comum do correspondente ano escolar.";
     let literacyText = "Alinhado com a média.";
 
-    if (user) {
+    if (user && !isMock) {
       const { data: context, error: contextError } = await supabase
         .from("school_context")
         .select("*")
@@ -73,7 +88,7 @@ export async function POST(req: NextRequest) {
       .replace("{perfil_turma}", classProfileText);
 
     // 3. Request Geração with Gemini Pro
-    const model = getGeminiModel("gemini-1.5-pro-latest");
+    const model = getGeminiModel();
 
     console.log(
       `[API GenerateActivity] Chamando Gemini Pro para folha de exercícios ("${tema}")...`
@@ -86,6 +101,7 @@ export async function POST(req: NextRequest) {
         topP: 0.85,
         topK: 40,
         maxOutputTokens: 3000,
+        responseMimeType: "application/json",
       },
     });
 

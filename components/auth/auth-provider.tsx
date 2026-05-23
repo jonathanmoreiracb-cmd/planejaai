@@ -24,7 +24,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const config = getSupabaseConfig();
-    if (!config.isConfigured) {
+    const useMockDemo =
+      typeof window !== "undefined" &&
+      (localStorage.getItem("use_mock_demo") === "true" ||
+        document.cookie.includes("use_mock_demo=true"));
+
+    if (!config.isConfigured || useMockDemo) {
       // Offline/Mock mode activated! Let's mock a user session so they can test the UI!
       const mockUser = {
         id: "mock-user-id-teacher",
@@ -52,38 +57,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const safetyTimeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 1200);
+
     const getInitialSession = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // 1.2s timeout to prevent client-side block if Supabase is offline/paused
+        const sessionPromise = supabase.auth
+          .getSession()
+          .then(({ data }) => data.session);
+        const timeoutPromise = new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), 1200)
+        );
+        const session = await Promise.race([sessionPromise, timeoutPromise]);
         setSession(session);
         setUser(session?.user ?? null);
       } catch (err) {
         console.error("Erro ao carregar sessão inicial:", err);
       } finally {
         setIsLoading(false);
+        clearTimeout(safetyTimeout);
       }
     };
 
-    getInitialSession();
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      getInitialSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+        clearTimeout(safetyTimeout);
+      });
+      subscription = data.subscription;
+    } catch (err) {
+      console.error("Erro ao assinar mudanças de autenticação:", err);
       setIsLoading(false);
-    });
+      clearTimeout(safetyTimeout);
+    }
 
     return () => {
-      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
   const signOut = async () => {
     setIsLoading(true);
     try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("use_mock_demo");
+        document.cookie =
+          "use_mock_demo=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+      }
       await supabase.auth.signOut();
       router.push("/login");
     } catch (err) {

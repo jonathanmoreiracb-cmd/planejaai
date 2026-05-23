@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
       disciplina,
       ano,
       tempo,
+      necessidadeEspecial,
       incluirPratica,
       incluirAvaliacao,
       incluirTarefa,
@@ -26,10 +27,19 @@ export async function POST(req: NextRequest) {
     // 1. Fetch user's school context from Supabase Server Client
     const supabase = createClient();
 
+    // Check if the user is in Mock Demo mode via cookies
+    const isMock = req.cookies.get("use_mock_demo")?.value === "true";
+
     // Get the active session user
     const {
-      data: { user },
+      data: { user: authUser },
     } = await supabase.auth.getUser();
+
+    let user = authUser;
+
+    if (!user && isMock) {
+      user = { id: "mock-user-id-teacher" } as any;
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -38,16 +48,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch subscription status and count monthly generations
-    const { data: subData } = await supabase
-      .from("subscriptions")
-      .select("plan_tier")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    let planTier = "free";
 
-    const planTier = subData?.plan_tier || "free";
+    if (isMock) {
+      planTier = "pro"; // Demo users get mock Pro tier
+    } else {
+      // Fetch subscription status and count monthly generations
+      const { data: subData } = await supabase
+        .from("subscriptions")
+        .select("plan_tier")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    if (planTier === "free") {
+      planTier = subData?.plan_tier || "free";
+    }
+
+    if (planTier === "free" && !isMock) {
       const now = new Date();
       const startOfMonth = new Date(
         now.getFullYear(),
@@ -76,10 +92,10 @@ export async function POST(req: NextRequest) {
     let infraText = "Recursos padrão básicos de sala de aula comum.";
     let classProfileText = "Turma comum do ano letivo correspondente.";
     let literacyText = "Alinhado com a média nacional do ano escolar.";
-    let specialNeedsText = "Sem demandas de inclusão informadas.";
+    let specialNeedsText = "Sem demandas de inclusão específicas informadas.";
     let studentsCountText = "Entre 20 e 30 alunos.";
 
-    if (user) {
+    if (user && !isMock) {
       const { data: context, error: contextError } = await supabase
         .from("school_context")
         .select("*")
@@ -108,9 +124,32 @@ export async function POST(req: NextRequest) {
           context.class_characteristics || "Comportamento típico da idade.";
         literacyText = context.literacy_level || "Alfabético.";
         specialNeedsText = context.has_special_needs
-          ? "Sim, há alunos com necessidades especiais (necessitam de adaptações e acessibilidade pedagógica)."
-          : "Não há alunos com necessidades especiais reportados.";
+          ? "Sim, há alunos com necessidades especiais genéricas que necessitam de acessibilidade pedagógica."
+          : "Não há alunos com necessidades especiais genéricas reportados.";
         studentsCountText = `${context.students_count || "21-30"} alunos.`;
+      }
+    }
+
+    // Explicit Pedagogical Special Needs Inclusão Overrides
+    if (necessidadeEspecial && necessidadeEspecial !== "regular") {
+      const conditionMap: Record<string, string> = {
+        tdah: "FOCO DE INCLUSÃO OBRIGATÓRIO (TDAH - Transtorno de Déficit de Atenção e Hiperatividade): O plano de aula DEVE ser adaptado para TDAH. Divida a aula em dinâmicas curtas de no máximo 10 a 15 minutos, evite longas sessões de leitura ou teoria expositiva pura, inclua micro-pausas ativas ou mudanças de estímulo tátil e ofereça instruções curtas e diretas passo a passo.",
+        autismo:
+          "FOCO DE INCLUSÃO OBRIGATÓRIO (Autismo / TEA - Transtorno do Espectro Autista): O plano de aula DEVE ser adaptado para Autismo. Organize uma rotina extremamente clara, use apoios visuais estruturados, evite metáforas ou duplos sentidos sem explicação literal, estabeleça alternativas de participação individual ou em duplas pequenas para evitar sobrecarga social, e preveja adaptações sensoriais (como espaço calmo/baixa luminosidade se necessário).",
+        dislexia:
+          "FOCO DE INCLUSÃO OBRIGATÓRIO (Dislexia e Transtornos de Leitura): O plano de aula DEVE ser adaptado para Dislexia. Apoie-se fortemente em mídias visuais e orais, reduza textos longos escritos no quadro, sugira fontes limpas e espaçadas nas folhas práticas, e em hipótese alguma penalize erros ortográficos ou realize leituras orais forçadas sob pressão.",
+        visual:
+          "FOCO DE INCLUSÃO OBRIGATÓRIO (Deficiência Visual - Baixa Visão/Cegueira): O plano de aula DEVE ser adaptado para Deficiência Visual. Promova a audiodescrição minuciosa de todas as imagens, mapas e diagramas, explore maquetes e objetos táteis tridimensionais nas etapas de desenvolvimento, e use alto contraste visual em todas as projeções.",
+        auditiva:
+          "FOCO DE INCLUSÃO OBRIGATÓRIO (Deficiência Auditiva / Surdez): O plano de aula DEVE ser adaptado para Deficiência Auditiva. Forneça materiais escritos, diagramas e mapas de apoio abundantes antes e durante a aula, garanta que o professor fale de frente para a classe com boa iluminação facial para leitura labial, e preveja a atuação em conjunto com intérprete de LIBRAS.",
+        intelectual:
+          "FOCO DE INCLUSÃO OBRIGATÓRIO (Deficiência Intelectual / Dificuldade Cognitiva): O plano de aula DEVE ser adaptado para Deficiência Intelectual. Fragmente os conteúdos complexos em etapas sequenciais muito diretas com exemplos do cotidiano concreto do aluno, use imagens e ilustrações explicativas, e dê tempo estendido para a realização de tarefas práticas.",
+        superdotacao:
+          "FOCO DE INCLUSÃO OBRIGATÓRIO (Altas Habilidades / Superdotação): O plano de aula DEVE ser enriquecido para Altas Habilidades. Além da atividade regular, prepare desafios extras, problemas abertos de pesquisa ou projetos de aprofundamento investigativo para manter o engajamento intelectual elevado do estudante.",
+      };
+
+      if (conditionMap[necessidadeEspecial]) {
+        specialNeedsText = conditionMap[necessidadeEspecial];
       }
     }
 
@@ -149,7 +188,7 @@ export async function POST(req: NextRequest) {
     let lastError = null;
     let planData = null;
 
-    const model = getGeminiModel("gemini-1.5-pro-latest");
+    const model = getGeminiModel();
 
     while (attempt < maxRetries) {
       try {
@@ -164,6 +203,7 @@ export async function POST(req: NextRequest) {
             topP: 0.8,
             topK: 40,
             maxOutputTokens: 4096,
+            responseMimeType: "application/json",
           },
         });
 

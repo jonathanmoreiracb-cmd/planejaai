@@ -11,8 +11,10 @@ export async function middleware(request: NextRequest) {
     supabaseAnonKey &&
     supabaseAnonKey !== "xxx";
 
-  if (!isConfigured) {
-    // Se não estiver configurado, permite o teste off-line sem redirecionamentos de login ou chamadas de rede
+  const useMockDemo = request.cookies.get("use_mock_demo")?.value === "true";
+
+  if (!isConfigured || useMockDemo) {
+    // Se não estiver configurado ou modo de demonstração ativo, permite o teste off-line sem redirecionamentos de login ou chamadas de rede
     return NextResponse.next();
   }
 
@@ -70,10 +72,6 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const pathname = request.nextUrl.pathname;
 
   const isProtectedRoute =
@@ -83,6 +81,23 @@ export async function middleware(request: NextRequest) {
 
   const isAuthPage =
     pathname.startsWith("/login") || pathname.startsWith("/signup");
+
+  // Bypass Supabase queries entirely for public landing pages or assets
+  if (!isProtectedRoute && !isAuthPage) {
+    return response;
+  }
+
+  let user = null;
+  try {
+    // 1.5s timeout to prevent server-side block if Supabase is offline/paused
+    const userPromise = supabase.auth.getUser().then(({ data }) => data.user);
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 1500)
+    );
+    user = await Promise.race([userPromise, timeoutPromise]);
+  } catch (err) {
+    console.error("Middleware auth timeout/error:", err);
+  }
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();

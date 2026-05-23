@@ -55,24 +55,34 @@ const sanitize = (text: string): string => {
 
 // Word wrapping utility for canvas drawing
 const wrapText = (text: string, maxChars: number): string[] => {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let currentLine = "";
+  if (!text) return [];
+  const paragraphs = text.split("\n");
+  const allLines: string[] = [];
 
-  words.forEach((word) => {
-    if ((currentLine + " " + word).trim().length > maxChars) {
-      lines.push(currentLine.trim());
-      currentLine = word;
-    } else {
-      currentLine = (currentLine + " " + word).trim();
+  paragraphs.forEach((para) => {
+    if (para.trim() === "") {
+      allLines.push("");
+      return;
+    }
+
+    const words = para.split(" ");
+    let currentLine = "";
+
+    words.forEach((word) => {
+      if ((currentLine + " " + word).trim().length > maxChars) {
+        allLines.push(currentLine.trim());
+        currentLine = word;
+      } else {
+        currentLine = (currentLine + " " + word).trim();
+      }
+    });
+
+    if (currentLine) {
+      allLines.push(currentLine.trim());
     }
   });
 
-  if (currentLine) {
-    lines.push(currentLine.trim());
-  }
-
-  return lines;
+  return allLines;
 };
 
 export function ExportPDFButton({
@@ -133,13 +143,15 @@ export function ExportPDFButton({
           drawPageWatermark(page);
           yOffset = height - 50;
         }
-        page.drawText(sanitized, {
-          x,
-          y: yOffset,
-          size: fontSize,
-          font,
-          color: colorRGB,
-        });
+        if (sanitized !== "") {
+          page.drawText(sanitized, {
+            x,
+            y: yOffset,
+            size: fontSize,
+            font,
+            color: colorRGB,
+          });
+        }
         yOffset -= spacing;
       };
 
@@ -152,12 +164,18 @@ export function ExportPDFButton({
         color: rgb(0.388, 0.4, 0.945), // #6366f1 Primary
       });
 
-      page.drawText(sanitize(`PLANO DE AULA: ${plan.titulo.toUpperCase()}`), {
-        x: 40,
-        y: height - 45,
-        size: 15,
-        font: HelveticaBold,
-        color: rgb(1, 1, 1),
+      const wrappedTitle = wrapText(
+        `PLANO DE AULA: ${plan.titulo.toUpperCase()}`,
+        52
+      );
+      wrappedTitle.forEach((line, index) => {
+        page.drawText(sanitize(line), {
+          x: 40,
+          y: height - 32 - index * 16,
+          size: 11.5,
+          font: HelveticaBold,
+          color: rgb(1, 1, 1),
+        });
       });
 
       page.drawText(
@@ -166,8 +184,8 @@ export function ExportPDFButton({
         ),
         {
           x: 40,
-          y: height - 70,
-          size: 10,
+          y: height - 42 - wrappedTitle.length * 16,
+          size: 9.5,
           font: Helvetica,
           color: rgb(0.9, 0.9, 1),
         }
@@ -305,6 +323,36 @@ export function ExportPDFButton({
         const wrappedTar = wrapText(plan.tarefa_de_casa, 75);
         wrappedTar.forEach((line) => {
           addText(line, 50, 10, Helvetica, rgb(0.2, 0.2, 0.2), 14);
+        });
+      }
+
+      if (
+        plan.sugestoes_de_adaptacao &&
+        plan.sugestoes_de_adaptacao.length > 0
+      ) {
+        yOffset -= 10;
+        addText(
+          "SUGESTOES DE ADAPTACAO (INCLUSAO)",
+          40,
+          12,
+          HelveticaBold,
+          rgb(0.388, 0.4, 0.945),
+          20
+        );
+        plan.sugestoes_de_adaptacao.forEach((adapt) => {
+          addText(
+            `Para ${adapt.para}:`,
+            50,
+            10,
+            HelveticaBold,
+            rgb(0.1, 0.1, 0.15),
+            14
+          );
+          const wrappedAdapt = wrapText(adapt.adaptacao, 75);
+          wrappedAdapt.forEach((line) => {
+            addText(line, 60, 9.5, Helvetica, rgb(0.25, 0.25, 0.25), 13);
+          });
+          yOffset -= 5;
         });
       }
 

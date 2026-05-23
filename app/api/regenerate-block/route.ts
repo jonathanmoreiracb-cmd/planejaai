@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       .replace("{estilo_solicitado}", estiloSolicitado);
 
     // 3. Request Geração
-    const model = getGeminiModel("gemini-1.5-pro-latest");
+    const model = getGeminiModel();
 
     console.log(
       `[API RegenerateBlock] Regerando bloco "${etapaNome}" com estilo "${estiloSolicitado}"...`
@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
         topP: 0.8,
         topK: 40,
         maxOutputTokens: 2048,
+        responseMimeType: "application/json",
       },
     });
 
