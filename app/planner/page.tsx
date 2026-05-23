@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { normalizeLessonPlan } from "@/lib/gemini/parser";
 import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeButton } from "@/components/planner/upgrade-button";
 import {
@@ -82,7 +83,15 @@ export default function PlannerPage() {
             ano: planToReopen.grade,
             tempo: planToReopen.duration,
           });
-          setGeneratedPlan(planToReopen.plan_data);
+          let rawPlan = planToReopen.plan_data;
+          if (typeof rawPlan === "string") {
+            try {
+              rawPlan = JSON.parse(rawPlan);
+            } catch (e) {
+              console.error("Erro ao analisar plan_data:", e);
+            }
+          }
+          setGeneratedPlan(normalizeLessonPlan(rawPlan));
         } catch (err: any) {
           setError(err.message || "Erro ao reabrir plano de aula.");
         } finally {

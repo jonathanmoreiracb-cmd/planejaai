@@ -177,7 +177,8 @@ export function PlanDisplay({
         rgb(0.388, 0.4, 0.945),
         20
       );
-      plan.objetivos.forEach((obj) => {
+      (plan.objetivos || []).forEach((obj) => {
+        if (!obj) return;
         const wrappedLines = obj.match(/.{1,80}(\s|$)/g) || [obj];
         wrappedLines.forEach((line, i) => {
           addText(
@@ -201,18 +202,18 @@ export function PlanDisplay({
         rgb(0.388, 0.4, 0.945),
         20
       );
-      plan.habilidades_bncc.forEach((h) => {
+      (plan.habilidades_bncc || []).forEach((h) => {
+        if (!h) return;
         addText(
-          `* ${h.codigo}:`,
+          `* ${h.codigo || "BNCC"}:`,
           50,
           10,
           HelveticaBold,
           rgb(0.1, 0.1, 0.15),
           14
         );
-        const wrappedDesc = h.descricao.match(/.{1,80}(\s|$)/g) || [
-          h.descricao,
-        ];
+        const descText = h.descricao || "";
+        const wrappedDesc = descText.match(/.{1,80}(\s|$)/g) || [descText];
         wrappedDesc.forEach((line) => {
           addText(line.trim(), 60, 9, Helvetica, rgb(0.3, 0.3, 0.3), 13);
         });
@@ -228,7 +229,8 @@ export function PlanDisplay({
         rgb(0.388, 0.4, 0.945),
         20
       );
-      plan.materiais_necessarios.forEach((mat) => {
+      (plan.materiais_necessarios || []).forEach((mat) => {
+        if (!mat) return;
         addText(`- ${mat}`, 50, 10, Helvetica, rgb(0.2, 0.2, 0.2), 14);
       });
       yOffset -= 15;
@@ -242,9 +244,10 @@ export function PlanDisplay({
         rgb(0.388, 0.4, 0.945),
         20
       );
-      plan.desenvolvimento.forEach((d) => {
+      (plan.desenvolvimento || []).forEach((d) => {
+        if (!d) return;
         addText(
-          `${d.etapa} (${d.tempo}) - Tipo: ${d.tipo}`,
+          `${d.etapa || "Desenvolvimento"} (${d.tempo || "15 minutos"}) - Tipo: ${d.tipo || ""}`,
           50,
           10,
           HelveticaBold,
@@ -253,7 +256,8 @@ export function PlanDisplay({
         );
 
         // Wrap activity text
-        const wrappedAct = d.atividade.match(/.{1,80}(\s|$)/g) || [d.atividade];
+        const actText = d.atividade || "";
+        const wrappedAct = actText.match(/.{1,80}(\s|$)/g) || [actText];
         wrappedAct.forEach((line) => {
           addText(line.trim(), 60, 9.5, Helvetica, rgb(0.25, 0.25, 0.25), 13);
         });
@@ -281,9 +285,8 @@ export function PlanDisplay({
         rgb(0.388, 0.4, 0.945),
         20
       );
-      const wrappedAv = plan.avaliacao.match(/.{1,80}(\s|$)/g) || [
-        plan.avaliacao,
-      ];
+      const avText = plan.avaliacao || "";
+      const wrappedAv = avText.match(/.{1,80}(\s|$)/g) || [avText];
       wrappedAv.forEach((line) => {
         addText(line.trim(), 50, 10, Helvetica, rgb(0.2, 0.2, 0.2), 14);
       });
@@ -298,9 +301,8 @@ export function PlanDisplay({
           rgb(0.388, 0.4, 0.945),
           20
         );
-        const wrappedTar = plan.tarefa_de_casa.match(/.{1,80}(\s|$)/g) || [
-          plan.tarefa_de_casa,
-        ];
+        const tarText = plan.tarefa_de_casa || "";
+        const wrappedTar = tarText.match(/.{1,80}(\s|$)/g) || [tarText];
         wrappedTar.forEach((line) => {
           addText(line.trim(), 50, 10, Helvetica, rgb(0.2, 0.2, 0.2), 14);
         });
@@ -316,18 +318,18 @@ export function PlanDisplay({
         rgb(0.388, 0.4, 0.945),
         20
       );
-      plan.sugestoes_de_adaptacao.forEach((ad) => {
+      (plan.sugestoes_de_adaptacao || []).forEach((ad) => {
+        if (!ad) return;
         addText(
-          `Para ${ad.para}:`,
+          `Para ${ad.para || ""}:`,
           50,
           10,
           HelveticaBold,
           rgb(0.1, 0.1, 0.15),
           14
         );
-        const wrappedAd = ad.adaptacao.match(/.{1,80}(\s|$)/g) || [
-          ad.adaptacao,
-        ];
+        const adText = ad.adaptacao || "";
+        const wrappedAd = adText.match(/.{1,80}(\s|$)/g) || [adText];
         wrappedAd.forEach((line) => {
           addText(line.trim(), 60, 9.5, Helvetica, rgb(0.3, 0.3, 0.3), 13);
         });
@@ -441,7 +443,7 @@ export function PlanDisplay({
               <span>Etapas de Desenvolvimento Pedagógico</span>
             </h3>
             <div className="grid gap-4">
-              {plan.desenvolvimento.map((blockData, idx) => (
+              {(plan.desenvolvimento || []).map((blockData, idx) => (
                 <PlanBlock
                   key={idx}
                   block={blockData}
@@ -471,7 +473,7 @@ export function PlanDisplay({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {plan.objetivos.map((obj, i) => (
+                  {(plan.objetivos || []).map((obj, i) => (
                     <div key={i} className="flex gap-2.5 items-start">
                       <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 mt-2" />
                       <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed font-semibold">
@@ -490,14 +492,14 @@ export function PlanDisplay({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {plan.habilidades_bncc.map((skill, i) => (
+                  {(plan.habilidades_bncc || []).map((skill, i) => (
                     <div
                       key={i}
                       className="space-y-1.5 border-b border-border/40 pb-3 last:border-b-0 last:pb-0"
                     >
-                      <BNCCBadge code={skill.codigo} />
+                      <BNCCBadge code={skill?.codigo || "BNCC"} />
                       <p className="text-xs text-muted-foreground leading-relaxed font-medium pl-1">
-                        {skill.descricao}
+                        {skill?.descricao || ""}
                       </p>
                     </div>
                   ))}
@@ -515,7 +517,7 @@ export function PlanDisplay({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-2">
-                  {plan.materiais_necessarios.map((mat, i) => (
+                  {(plan.materiais_necessarios || []).map((mat, i) => (
                     <Badge
                       key={i}
                       variant="outline"
@@ -536,7 +538,7 @@ export function PlanDisplay({
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed font-medium">
-                    {plan.avaliacao}
+                    {plan.avaliacao || ""}
                   </p>
                 </CardContent>
               </Card>
@@ -569,16 +571,16 @@ export function PlanDisplay({
             </h3>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              {plan.sugestoes_de_adaptacao.map((ad, i) => (
+              {(plan.sugestoes_de_adaptacao || []).map((ad, i) => (
                 <Card
                   key={i}
                   className="border border-border/80 hover:border-primary/20 bg-card rounded-2xl shadow-sm hover:shadow-md transition-all p-5 space-y-2.5"
                 >
                   <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 font-bold rounded-lg text-[10px] sm:text-xs uppercase tracking-wide">
-                    Para: {ad.para}
+                    Para: {ad?.para || ""}
                   </Badge>
                   <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed font-semibold">
-                    {ad.adaptacao}
+                    {ad?.adaptacao || ""}
                   </p>
                 </Card>
               ))}

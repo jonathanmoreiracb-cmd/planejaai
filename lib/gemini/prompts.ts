@@ -23,6 +23,7 @@ Gerar um plano de aula completo sobre o tema "{tema}" para a disciplina "{discip
 Adicione as seguintes opções conforme solicitadas:
 - Incluir atividade prática: {incluir_pratica}
 - Incluir avaliação formativa: {incluir_avaliacao}
+- Incluir tarefa de casa: {incluir_tarefa}
 REGRAS OBRIGATÓRIAS DE JSON (CRÍTICO - NÃO IGNORE):
 1. O retorno deve ser UNICAMENTE o objeto JSON válido, sem qualquer introdução ou conclusão.
 2. ABSOLUTELY NEVER USE DOUBLE QUOTES (") inside JSON string values, descriptions, or observations. If you need to cite a dialogue, name, rule, game, or anything else, ALWAYS use single quotes ('). Under no circumstances should the double quote character (") appear inside any text field in your JSON.
@@ -77,11 +78,15 @@ ESTRUTURA OBRIGATÓRIA (retorne UNICAMENTE em JSON válido, sem texto explicativ
   ]
 }
 
-DICAS DE QUALIDADE PEDAGÓGICA:
-- Atividades devem ser práticas e engajadoras para crianças.
-- Use linguagem simples e direta.
-- Inclua exemplos concretos e cenários reais.
-- Seja específico (não diga apenas "fazer atividade", diga "fazer desenho do ciclo da água em folha A4 com giz de cera").
+DICAS DE QUALIDADE PEDAGÓGICA (MUITO IMPORTANTE):
+- Cada atividade do "desenvolvimento" deve conter uma descrição extremamente detalhada e rica (no mínimo 4 a 6 frases completas), descrevendo o passo a passo da dinâmica, perguntas estimulantes que o professor deve fazer aos alunos e a ação esperada deles.
+- Nunca retorne textos curtos, genéricos ou incompletos. O plano deve parecer escrito por um pedagogo sênior e estar 100% pronto para ser aplicado.
+- Se a opção de Atividade Prática estiver ativada, o "Desenvolvimento" deve obrigatoriamente descrever um experimento prático, dinâmica de grupo ativa, jogo ou laboratório físico.
+- Se a Avaliação Formativa ou Tarefa de Casa forem solicitadas, crie enunciados e dinâmicas criativas e completas, em vez de resumos genéricos.
+- Atividades devem ser práticas e engajadoras para as crianças da respectiva faixa etária.
+- Use linguagem simples, profissional e direta.
+- Inclua exemplos concretos e cenários reais de aplicação.
+- Seja específico (não diga apenas "fazer atividade", diga "fazer desenho do ciclo da água em folha A4 com giz de cera ou lápis de cor").
 - Considere o tempo real que cada atividade leva na sala de aula.
 - Priorize atividades que usam materiais acessíveis (papel, lápis, cola, tesoura, recicláveis).
 
