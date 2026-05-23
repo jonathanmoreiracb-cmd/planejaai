@@ -14,6 +14,8 @@ import {
   RotateCw,
   Sliders,
   DollarSign,
+  Shield,
+  Key,
 } from "lucide-react";
 import {
   Card,
@@ -67,11 +69,14 @@ export default function AdminDashboard() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [enteredPassword, setEnteredPassword] = useState("");
+  const [isCheckingPassword, setIsCheckingPassword] = useState(false);
   const [searchUserQuery, setSearchUserQuery] = useState("");
   const [searchPlanQuery, setSearchPlanQuery] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<"users" | "plans">("users");
-  const [isDemoMode, setIsDemoMode] = useState(false);
+
   const [toastMessage, setToastMessage] = useState<{
     title: string;
     description: string;
@@ -91,160 +96,103 @@ export default function AdminDashboard() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const loadAdminData = async (forceDemo = false) => {
+  const loadAdminData = async (pwd: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin");
-      const data = await res.json();
+      const res = await fetch("/api/admin", {
+        headers: {
+          "x-admin-password": pwd,
+        },
+      });
 
-      if (forceDemo) {
-        // Force fully interactive mock state for presentation
-        const mockUsers = [
-          {
-            id: "usr-mock-1",
-            email: "professora.teste@planejaai.com",
-            created_at: new Date(
-              Date.now() - 30 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            plan_tier: localStorage.getItem("mock_tier_usr-mock-1") || "pro",
-            plans_count: 14,
-            last_sign_in_at: new Date(
-              Date.now() - 2 * 60 * 60 * 1000
-            ).toISOString(),
-          },
-          {
-            id: "usr-mock-2",
-            email: "joao.silva@colegioparaiso.edu.br",
-            created_at: new Date(
-              Date.now() - 15 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            plan_tier: localStorage.getItem("mock_tier_usr-mock-2") || "school",
-            plans_count: 28,
-            last_sign_in_at: new Date(
-              Date.now() - 24 * 60 * 60 * 1000
-            ).toISOString(),
-          },
-          {
-            id: "usr-mock-3",
-            email: "clara.mendes@pedagogico.com.br",
-            created_at: new Date(
-              Date.now() - 5 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            plan_tier: localStorage.getItem("mock_tier_usr-mock-3") || "free",
-            plans_count: 2,
-            last_sign_in_at: new Date(
-              Date.now() - 4 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-          },
-          {
-            id: "usr-mock-4",
-            email: "ricardo.fisica@gmail.com",
-            created_at: new Date(
-              Date.now() - 60 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            plan_tier: localStorage.getItem("mock_tier_usr-mock-4") || "pro",
-            plans_count: 19,
-            last_sign_in_at: new Date(
-              Date.now() - 12 * 60 * 1000
-            ).toISOString(),
-          },
-          {
-            id: "usr-mock-5",
-            email: "helena.alfabetizacao@yahoo.com",
-            created_at: new Date(
-              Date.now() - 1 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            plan_tier: localStorage.getItem("mock_tier_usr-mock-5") || "free",
-            plans_count: 0,
-            last_sign_in_at: new Date(
-              Date.now() - 1 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-          },
-        ];
-        setUsers(mockUsers);
-        setPlans(data.plans || []);
-
-        // Recalculate stats based on live sandbox tiers
-        const proCount = mockUsers.filter((u) => u.plan_tier === "pro").length;
-        const schoolCount = mockUsers.filter(
-          (u) => u.plan_tier === "school"
-        ).length;
-        setStats({
-          totalUsers: mockUsers.length,
-          totalPlans: 1248,
-          activeSubsPro: proCount,
-          activeSubsSchool: schoolCount,
-          estimatedMrr: proCount * 29.0 + schoolCount * 89.0,
-          generationSuccessRate: 98.4,
-        });
-      } else {
-        setUsers(data.users || []);
-        setPlans(data.plans || []);
-        setStats(
-          data.stats || {
-            totalUsers: 0,
-            totalPlans: 0,
-            activeSubsPro: 0,
-            activeSubsSchool: 0,
-            estimatedMrr: 0,
-            generationSuccessRate: 100,
-          }
-        );
+      if (res.status === 401) {
+        setIsAuthenticated(false);
+        sessionStorage.removeItem("admin_auth_token");
+        throw new Error("Senha administrativa incorreta.");
       }
-    } catch (e) {
+
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setUsers(data.users || []);
+      setPlans(data.plans || []);
+      setStats(
+        data.stats || {
+          totalUsers: 0,
+          totalPlans: 0,
+          activeSubsPro: 0,
+          activeSubsSchool: 0,
+          estimatedMrr: 0,
+          generationSuccessRate: 100,
+        }
+      );
+      setIsAuthenticated(true);
+    } catch (e: any) {
       console.error(e);
       toast({
-        title: "Erro ao carregar dados",
-        description: "Utilizando dados de demonstração offline.",
+        title: "Acesso Negado",
+        description: e.message || "Erro ao conectar-se ao servidor.",
         variant: "destructive",
       });
+      throw e;
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // Check if we are running in local demo mode
-    const useMockDemo =
-      typeof window !== "undefined" &&
-      (localStorage.getItem("use_mock_demo") === "true" ||
-        document.cookie.includes("use_mock_demo=true"));
-
-    setIsDemoMode(useMockDemo);
-    loadAdminData(useMockDemo);
+    const cachedToken = sessionStorage.getItem("admin_auth_token") || "";
+    if (cachedToken) {
+      loadAdminData(cachedToken);
+    } else {
+      setIsLoading(false);
+    }
   }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCheckingPassword(true);
+    try {
+      await loadAdminData(enteredPassword);
+      sessionStorage.setItem("admin_auth_token", enteredPassword);
+      toast({
+        title: "Acesso Autorizado",
+        description: "Conexão administrativa segura estabelecida com sucesso!",
+      });
+    } catch (err) {
+      // Handled in loadAdminData
+    } finally {
+      setIsCheckingPassword(false);
+    }
+  };
 
   const handleUpdatePlanTier = async (userId: string, newTier: string) => {
     try {
-      if (isDemoMode) {
-        localStorage.setItem(`mock_tier_${userId}`, newTier);
-        toast({
-          title: "Plano Atualizado (Playground)",
-          description: `Plano do usuário atualizado localmente para ${newTier.toUpperCase()}!`,
-        });
-        loadAdminData(true);
-        return;
-      }
-
+      const token = sessionStorage.getItem("admin_auth_token") || "";
       const res = await fetch("/api/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": token,
+        },
         body: JSON.stringify({ userId, newTier }),
       });
 
       const data = await res.json();
       if (!res.ok || data.error) {
-        throw new Error(data.error || "Falha ao atualizar plano.");
+        throw new Error(data.error || "Falha ao alterar plano.");
       }
 
       toast({
-        title: "Plano Atualizado!",
-        description: `Plano do usuário atualizado para ${newTier.toUpperCase()} no banco de dados!`,
+        title: "Plano Alterado!",
+        description: `Plano do usuário atualizado para ${newTier.toUpperCase()} com sucesso no banco de dados!`,
       });
-      loadAdminData(false);
+      loadAdminData(token);
     } catch (err: any) {
       toast({
-        title: "Erro ao atualizar plano",
+        title: "Erro na alteração",
         description: err.message,
         variant: "destructive",
       });
@@ -269,6 +217,77 @@ export default function AdminDashboard() {
     );
   });
 
+  // Render password portal page if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6 bg-slate-950 text-white relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/25 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
+
+        <Card className="w-full max-w-md border border-white/10 bg-slate-900/60 backdrop-blur-2xl rounded-3xl p-8 space-y-6 shadow-2xl relative z-10">
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 animate-pulse">
+              <Shield className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-black tracking-tight text-white mt-4">
+              Área Restrita
+            </h2>
+            <p className="text-xs font-semibold text-slate-400 max-w-[280px]">
+              Insira a senha administrativa para liberar o controle em tempo
+              real da plataforma.
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Key className="h-3 w-3 text-amber-500" />
+                <span>Senha de Acesso</span>
+              </label>
+              <Input
+                type="password"
+                placeholder="••••••••••••"
+                value={enteredPassword}
+                onChange={(e) => setEnteredPassword(e.target.value)}
+                className="bg-slate-950/65 border-white/10 text-white placeholder-slate-600 rounded-xl h-12 focus:ring-amber-500 focus:border-amber-500 font-semibold"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isCheckingPassword || !enteredPassword}
+              className="w-full h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 transition-all hover:scale-[1.01]"
+            >
+              {isCheckingPassword ? (
+                <span>Verificando...</span>
+              ) : (
+                <span>Entrar no Painel</span>
+              )}
+            </Button>
+          </form>
+        </Card>
+
+        {/* Premium Self-Contained Overlay Notification Toast */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl border shadow-xl max-w-sm bg-red-500/10 border-red-500/20 text-red-500 animate-in slide-in-from-bottom-5">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-0.5">
+                <h4 className="font-black text-xs uppercase tracking-wide">
+                  {toastMessage.title}
+                </h4>
+                <p className="text-[11px] font-bold text-foreground/80 leading-relaxed">
+                  {toastMessage.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 space-y-8 p-6 md:p-10 max-w-7xl mx-auto animate-in fade-in duration-300">
       {/* Header Banner */}
@@ -284,31 +303,17 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Playground Toggle */}
+        {/* Access Role Badge */}
         <div className="flex items-center gap-3 bg-muted/65 px-4 py-2 rounded-2xl border border-border/80 shadow-inner">
-          <Zap
-            className={`h-4.5 w-4.5 ${isDemoMode ? "text-amber-500 fill-amber-500" : "text-muted-foreground"}`}
-          />
+          <Shield className="h-4.5 w-4.5 text-amber-500 fill-amber-500/20" />
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase text-foreground leading-none">
-              Modo Sandbox
+              Acesso Real
             </span>
             <span className="text-[9px] text-muted-foreground font-semibold leading-normal">
-              Telas interativas de demonstração
+              Conectado ao Banco de Dados
             </span>
           </div>
-          <Button
-            size="sm"
-            variant={isDemoMode ? "default" : "outline"}
-            className="h-8 rounded-xl font-bold text-xs"
-            onClick={() => {
-              const newVal = !isDemoMode;
-              setIsDemoMode(newVal);
-              loadAdminData(newVal);
-            }}
-          >
-            {isDemoMode ? "Ativo" : "Inativo"}
-          </Button>
         </div>
       </div>
 
@@ -540,7 +545,11 @@ export default function AdminDashboard() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => loadAdminData(isDemoMode)}
+                  onClick={() =>
+                    loadAdminData(
+                      sessionStorage.getItem("admin_auth_token") || ""
+                    )
+                  }
                   className="h-9 rounded-lg px-3 border-border hover:bg-muted/40"
                 >
                   <RotateCw className="h-4 w-4 text-muted-foreground" />

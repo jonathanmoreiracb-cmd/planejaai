@@ -111,8 +111,21 @@ const getMockData = () => {
   };
 };
 
+const verifyAdminPassword = (req: Request): boolean => {
+  const headerPassword = req.headers.get("x-admin-password");
+  const correctPassword = process.env.ADMIN_PASSWORD || "PlanejaAI2026!";
+  return headerPassword === correctPassword;
+};
+
 export async function GET(req: Request) {
   try {
+    if (!verifyAdminPassword(req)) {
+      return NextResponse.json(
+        { error: "Acesso administrativo negado. Senha incorreta." },
+        { status: 401 }
+      );
+    }
+
     if (!isConfigured) {
       return NextResponse.json(getMockData());
     }
@@ -204,6 +217,13 @@ export async function GET(req: Request) {
 // POST endpoint to manually upgrade/change user subscription plan tiers
 export async function POST(req: Request) {
   try {
+    if (!verifyAdminPassword(req)) {
+      return NextResponse.json(
+        { error: "Acesso administrativo negado. Senha incorreta." },
+        { status: 401 }
+      );
+    }
+
     const { userId, newTier } = await req.json();
 
     if (!userId || !newTier) {
