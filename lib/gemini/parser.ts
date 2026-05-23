@@ -38,8 +38,12 @@ export function parseGeminiResponse(text: string): any {
       const lastBraceIndex = cleanText.lastIndexOf("}");
 
       if (firstBraceIndex === -1 || lastBraceIndex === -1) {
+        console.error(
+          "[Parser Error] Text did not contain curly braces:",
+          cleanText
+        );
         throw new Error(
-          "Não foi possível encontrar a estrutura JSON de chaves na resposta."
+          `Não foi possível encontrar a estrutura JSON de chaves na resposta. Conteúdo retornado: "${cleanText.slice(0, 150)}..."`
         );
       }
 
