@@ -6,9 +6,14 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const isConfigured =
   supabaseUrl &&
+  supabaseUrl.startsWith("http") &&
   supabaseUrl !== "xxx" &&
+  supabaseUrl !== "undefined" &&
+  supabaseUrl !== "null" &&
   supabaseAnonKey &&
-  supabaseAnonKey !== "xxx";
+  supabaseAnonKey !== "xxx" &&
+  supabaseAnonKey !== "undefined" &&
+  supabaseAnonKey !== "null";
 
 export const createClient = () => {
   const cookieStore = cookies();

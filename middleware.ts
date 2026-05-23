@@ -7,9 +7,14 @@ export async function middleware(request: NextRequest) {
 
   const isConfigured =
     supabaseUrl &&
+    supabaseUrl.startsWith("http") &&
     supabaseUrl !== "xxx" &&
+    supabaseUrl !== "undefined" &&
+    supabaseUrl !== "null" &&
     supabaseAnonKey &&
-    supabaseAnonKey !== "xxx";
+    supabaseAnonKey !== "xxx" &&
+    supabaseAnonKey !== "undefined" &&
+    supabaseAnonKey !== "null";
 
   const useMockDemo = request.cookies.get("use_mock_demo")?.value === "true";
 

@@ -14,9 +14,14 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const isConfigured =
   supabaseUrl &&
+  supabaseUrl.startsWith("http") &&
   supabaseUrl !== "xxx" &&
+  supabaseUrl !== "undefined" &&
+  supabaseUrl !== "null" &&
   supabaseServiceRoleKey &&
-  supabaseServiceRoleKey !== "xxx";
+  supabaseServiceRoleKey !== "xxx" &&
+  supabaseServiceRoleKey !== "undefined" &&
+  supabaseServiceRoleKey !== "null";
 
 const supabaseAdmin = createClient(
   isConfigured ? supabaseUrl : "https://placeholder-url.supabase.co",
