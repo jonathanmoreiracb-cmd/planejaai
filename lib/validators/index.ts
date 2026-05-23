@@ -14,9 +14,9 @@ export const SignupSchema = z
       .string()
       .min(6, "A confirmação de senha deve ter no mínimo 6 caracteres"),
     role: z.enum(["teacher", "manager"], {
-      message: "Selecione seu cargo escolar",
+      errorMap: () => ({ message: "Selecione seu cargo escolar" }),
     }),
-    acceptTerms: z.literal(true, {
+    acceptTerms: z.boolean().refine((val) => val === true, {
       message: "Você deve aceitar os termos de uso",
     }),
   })
