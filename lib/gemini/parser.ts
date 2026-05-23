@@ -138,6 +138,13 @@ function sanitizeJsonStrings(jsonStr: string): string {
         inString = true;
         result += char;
       }
+    } else if (char === "\n" || char === "\r") {
+      if (inString) {
+        // Escape raw literal line breaks inside string values as '\n'
+        result += "\\n";
+      } else {
+        result += char;
+      }
     } else {
       result += char;
     }
