@@ -496,81 +496,120 @@ export function ActivityPDFButton({
         width: width - 70,
         height: 100,
         borderWidth: 1.5,
-        borderColor: rgb(0.4, 0.4, 0.5),
-        color: rgb(0.98, 0.98, 0.99),
+        borderColor: rgb(0.31, 0.275, 0.9), // Indigo Border for Premium Brand alignment
+        color: rgb(0.98, 0.98, 1.0), // Clean bright soft-indigo background
       });
 
-      page.drawText(
-        sanitize(
-          "ESCOLA: __________________________________________________________________"
-        ),
-        {
-          x: 45,
-          y: height - 60,
-          size: 9,
-          font: HelveticaBold,
-          color: rgb(0.2, 0.2, 0.2),
-        }
-      );
+      // School Row
+      page.drawText(sanitize("ESCOLA:"), {
+        x: 48,
+        y: height - 60,
+        size: 9,
+        font: HelveticaBold,
+        color: rgb(0.2, 0.2, 0.3),
+      });
+      page.drawLine({
+        start: { x: 92, y: height - 62 },
+        end: { x: width - 48, y: height - 62 },
+        thickness: 0.8,
+        color: rgb(0.75, 0.75, 0.8),
+      });
 
-      page.drawText(
-        sanitize(
-          "ALUNO(A): ________________________________________________________________"
-        ),
-        {
-          x: 45,
-          y: height - 85,
-          size: 9,
-          font: HelveticaBold,
-          color: rgb(0.2, 0.2, 0.2),
-        }
-      );
+      // Student Row
+      page.drawText(sanitize("ALUNO(A):"), {
+        x: 48,
+        y: height - 85,
+        size: 9,
+        font: HelveticaBold,
+        color: rgb(0.2, 0.2, 0.3),
+      });
+      page.drawLine({
+        start: { x: 100, y: height - 87 },
+        end: { x: width - 48, y: height - 87 },
+        thickness: 0.8,
+        color: rgb(0.75, 0.75, 0.8),
+      });
 
-      page.drawText(sanitize("PROFESSOR(A): _________________________"), {
-        x: 45,
+      // Grid Row: Professor, Data, Turma
+      page.drawText(sanitize("PROFESSOR(A):"), {
+        x: 48,
         y: height - 110,
         size: 9,
         font: HelveticaBold,
-        color: rgb(0.2, 0.2, 0.2),
+        color: rgb(0.2, 0.2, 0.3),
+      });
+      page.drawLine({
+        start: { x: 125, y: height - 112 },
+        end: { x: 270, y: height - 112 },
+        thickness: 0.8,
+        color: rgb(0.75, 0.75, 0.8),
       });
 
-      page.drawText(sanitize("DATA: ____/____/_______"), {
-        x: 280,
+      page.drawText(sanitize("DATA:"), {
+        x: 285,
         y: height - 110,
         size: 9,
         font: HelveticaBold,
-        color: rgb(0.2, 0.2, 0.2),
+        color: rgb(0.2, 0.2, 0.3),
+      });
+      page.drawLine({
+        start: { x: 318, y: height - 112 },
+        end: { x: 410, y: height - 112 },
+        thickness: 0.8,
+        color: rgb(0.75, 0.75, 0.8),
       });
 
-      page.drawText(sanitize(`TURMA: ${ano}`), {
-        x: 430,
+      page.drawText(sanitize("TURMA:"), {
+        x: 425,
         y: height - 110,
         size: 9,
         font: HelveticaBold,
-        color: rgb(0.2, 0.2, 0.2),
+        color: rgb(0.2, 0.2, 0.3),
+      });
+      page.drawText(sanitize(ano), {
+        x: 468,
+        y: height - 110,
+        size: 9.5,
+        font: Helvetica,
+        color: rgb(0.3, 0.3, 0.4),
+      });
+      page.drawLine({
+        start: { x: 465, y: height - 112 },
+        end: { x: width - 48, y: height - 112 },
+        thickness: 0.8,
+        color: rgb(0.75, 0.75, 0.8),
       });
 
       yOffset = height - 165;
 
-      // 2. WORKSHEET TITLE
-      page.drawText(sanitize(activity.titulo.toUpperCase()), {
-        x: 40,
-        y: yOffset,
-        size: 13,
-        font: HelveticaBold,
-        color: rgb(0.957, 0.247, 0.368), // Rose Accent
+      // 2. WORKSHEET TITLE (Fully Wrapped to prevent right overflow)
+      const wrappedTitle = wrapText(activity.titulo.toUpperCase(), 62);
+      wrappedTitle.forEach((line, index) => {
+        page.drawText(sanitize(line), {
+          x: 48,
+          y: yOffset - index * 16,
+          size: 12.5,
+          font: HelveticaBold,
+          color: rgb(0.18, 0.2, 0.35), // Sophisticated deep navy
+        });
       });
-      yOffset -= 25;
 
-      // Instructions block
-      addText(
-        `Instruções: ${activity.instrucoes}`,
-        40,
-        9.5,
-        Helvetica,
-        rgb(0.3, 0.3, 0.3),
-        20
-      );
+      // Accent left line for title
+      page.drawRectangle({
+        x: 35,
+        y: yOffset - wrappedTitle.length * 16 + 18,
+        width: 3.5,
+        height: wrappedTitle.length * 16,
+        color: rgb(0.31, 0.275, 0.9), // Indigo brand color
+      });
+
+      yOffset -= wrappedTitle.length * 16 + 10;
+
+      // Instructions block (fully wrapped to prevent edge overflow)
+      const wrappedInst = wrapText(`Instruções: ${activity.instrucoes}`, 78);
+      wrappedInst.forEach((line) => {
+        addText(line, 40, 9.5, Helvetica, rgb(0.35, 0.35, 0.4), 14);
+      });
       yOffset -= 5;
 
       // 3. DRAW QUESTIONS WITH BLANK ROWS & CHECKBOXES
