@@ -153,31 +153,54 @@ export function PlanGenerator({
   };
 
   const disciplinas = [
-    "Português",
+    "Português / Língua Portuguesa",
     "Matemática",
-    "Ciências",
+    "Ciências da Natureza",
+    "Física",
+    "Química",
+    "Biologia",
     "História",
     "Geografia",
-    "Arte",
+    "Sociologia",
+    "Filosofia",
+    "Arte / Educação Artística",
     "Educação Física",
+    "Redação",
+    "Literatura",
+    "Inglês",
+    "Espanhol",
+    "Ensino Religioso",
+    "Projeto de Vida",
+    "Educação Financeira",
+    "Tecnologia & Robótica",
+    "Empreendedorismo",
   ];
 
   const anos = [
-    "1º ano EF",
-    "2º ano EF",
-    "3º ano EF",
-    "4º ano EF",
-    "5º ano EF",
-    "6º ano EF",
-    "7º ano EF",
-    "8º ano EF",
-    "9º ano EF",
-    "1º ano EM",
-    "2º ano EM",
-    "3º ano EM",
+    "Educação Infantil (Maternal / Pré)",
+    "1º ano EF (Ensino Fundamental I)",
+    "2º ano EF (Ensino Fundamental I)",
+    "3º ano EF (Ensino Fundamental I)",
+    "4º ano EF (Ensino Fundamental I)",
+    "5º ano EF (Ensino Fundamental I)",
+    "6º ano EF (Ensino Fundamental II)",
+    "7º ano EF (Ensino Fundamental II)",
+    "8º ano EF (Ensino Fundamental II)",
+    "9º ano EF (Ensino Fundamental II)",
+    "1º ano EM (Ensino Médio)",
+    "2º ano EM (Ensino Médio)",
+    "3º ano EM (Ensino Médio)",
+    "EJA (Educação de Jovens e Adultos)",
   ];
 
-  const tempos = ["45min", "90min", "2 aulas de 45min"];
+  const tempos = [
+    "45min",
+    "50min",
+    "90min",
+    "100min (Dobradinha)",
+    "2 aulas de 45min",
+    "3 aulas de 50min",
+  ];
 
   const necessidadesEspeciais = [
     { value: "regular", label: "Nenhuma (Plano de Aula Regular)" },
