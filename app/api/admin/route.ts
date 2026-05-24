@@ -4,27 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 // Force Next.js to treat this route as fully dynamic on every request
 export const dynamic = "force-dynamic";
 
-const verifyAdminPassword = (req: Request): boolean => {
-  const headerPassword = req.headers.get("x-admin-password");
-  const correctPassword = process.env.ADMIN_PASSWORD || "PlanejaAI2026!";
-  return headerPassword === correctPassword;
-};
-
 export async function GET(req: Request) {
   try {
-    if (!verifyAdminPassword(req)) {
-      return NextResponse.json(
-        { error: "Acesso administrativo negado. Senha incorreta." },
-        { status: 401 }
-      );
-    }
-
     // Read environment variables dynamically at request runtime to bypass build-time static caching
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseServiceRoleKey =
-      req.headers.get("x-supabase-service-key") ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      "";
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
     const isConfigured =
       supabaseUrl &&
@@ -36,6 +20,7 @@ export async function GET(req: Request) {
       supabaseServiceRoleKey !== "null";
 
     if (!isConfigured) {
+      // If unconfigured, return a mock/empty schema but with success status so the dashboard loads freely
       const foundKeys = Object.keys(process.env).filter(
         (k) =>
           k.includes("SUPABASE") ||
@@ -43,14 +28,20 @@ export async function GET(req: Request) {
           k.includes("SERVICE") ||
           k.includes("ANON")
       );
-      return NextResponse.json(
-        {
-          error: `Configuração pendente: A variável de ambiente 'SUPABASE_SERVICE_ROLE_KEY' não está configurada no servidor. Chaves de ambiente detectadas: ${JSON.stringify(
-            foundKeys
-          )}.`,
+      return NextResponse.json({
+        isConfigured: false,
+        users: [],
+        plans: [],
+        stats: {
+          totalUsers: 0,
+          totalPlans: 0,
+          activeSubsPro: 0,
+          activeSubsSchool: 0,
+          estimatedMrr: 0.0,
+          generationSuccessRate: 100.0,
         },
-        { status: 500 }
-      );
+        debugKeys: foundKeys,
+      });
     }
 
     // Initialize Supabase Admin client dynamically
@@ -150,6 +141,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({
+      isConfigured: true,
       users,
       plans: formattedPlans,
       stats: {
@@ -172,13 +164,6 @@ export async function GET(req: Request) {
 // POST endpoint to manually upgrade/change user subscription plan tiers
 export async function POST(req: Request) {
   try {
-    if (!verifyAdminPassword(req)) {
-      return NextResponse.json(
-        { error: "Acesso administrativo negado. Senha incorreta." },
-        { status: 401 }
-      );
-    }
-
     const { userId, newTier } = await req.json();
 
     if (!userId || !newTier) {
@@ -189,10 +174,7 @@ export async function POST(req: Request) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseServiceRoleKey =
-      req.headers.get("x-supabase-service-key") ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      "";
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
     const isConfigured =
       supabaseUrl &&

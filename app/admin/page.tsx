@@ -69,10 +69,6 @@ export default function AdminDashboard() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [enteredPassword, setEnteredPassword] = useState("");
-  const [enteredServiceKey, setEnteredServiceKey] = useState("");
-  const [isCheckingPassword, setIsCheckingPassword] = useState(false);
   const [searchUserQuery, setSearchUserQuery] = useState("");
   const [searchPlanQuery, setSearchPlanQuery] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
@@ -98,32 +94,27 @@ export default function AdminDashboard() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const loadAdminData = async (pwd: string, serviceKey?: string) => {
+  const loadAdminData = async () => {
     setIsLoading(true);
-    const activeServiceKey =
-      serviceKey || sessionStorage.getItem("admin_service_key") || "";
     try {
-      const res = await fetch("/api/admin", {
-        headers: {
-          "x-admin-password": pwd,
-          "x-supabase-service-key": activeServiceKey,
-        },
-      });
-
-      if (res.status === 401) {
-        setIsAuthenticated(false);
-        sessionStorage.removeItem("admin_auth_token");
-        sessionStorage.removeItem("admin_service_key");
-        throw new Error("Senha administrativa incorreta.");
-      }
-
+      const res = await fetch("/api/admin");
       const data = await res.json();
+
       if (data.error) {
         setServerError(data.error);
         throw new Error(data.error);
       }
 
-      setServerError(null);
+      if (data.isConfigured === false) {
+        setServerError(
+          `A variável de ambiente 'SUPABASE_SERVICE_ROLE_KEY' não está configurada no seu servidor da Vercel. Chaves de ambiente contendo SUPABASE/ROLE detectadas: ${JSON.stringify(
+            data.debugKeys || []
+          )}.`
+        );
+      } else {
+        setServerError(null);
+      }
+
       setUsers(data.users || []);
       setPlans(data.plans || []);
       setStats(
@@ -136,60 +127,28 @@ export default function AdminDashboard() {
           generationSuccessRate: 100,
         }
       );
-      setIsAuthenticated(true);
     } catch (e: any) {
       console.error(e);
       toast({
-        title: "Acesso Negado",
-        description: e.message || "Erro ao conectar-se ao servidor.",
+        title: "Erro de Conexão",
+        description: e.message || "Erro ao carregar dados do painel admin.",
         variant: "destructive",
       });
-      throw e;
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    const cachedToken = sessionStorage.getItem("admin_auth_token") || "";
-    const cachedServiceKey = sessionStorage.getItem("admin_service_key") || "";
-    if (cachedToken) {
-      loadAdminData(cachedToken, cachedServiceKey);
-    } else {
-      setIsLoading(false);
-    }
+    loadAdminData();
   }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsCheckingPassword(true);
-    try {
-      await loadAdminData(enteredPassword, enteredServiceKey);
-      sessionStorage.setItem("admin_auth_token", enteredPassword);
-      if (enteredServiceKey) {
-        sessionStorage.setItem("admin_service_key", enteredServiceKey);
-      }
-      toast({
-        title: "Acesso Autorizado",
-        description: "Conexão administrativa segura estabelecida com sucesso!",
-      });
-    } catch (err) {
-      // Handled in loadAdminData
-    } finally {
-      setIsCheckingPassword(false);
-    }
-  };
 
   const handleUpdatePlanTier = async (userId: string, newTier: string) => {
     try {
-      const token = sessionStorage.getItem("admin_auth_token") || "";
-      const serviceKey = sessionStorage.getItem("admin_service_key") || "";
       const res = await fetch("/api/admin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": token,
-          "x-supabase-service-key": serviceKey,
         },
         body: JSON.stringify({ userId, newTier }),
       });
@@ -203,7 +162,7 @@ export default function AdminDashboard() {
         title: "Plano Alterado!",
         description: `Plano do usuário atualizado para ${newTier.toUpperCase()} com sucesso no banco de dados!`,
       });
-      loadAdminData(token);
+      await loadAdminData();
     } catch (err: any) {
       toast({
         title: "Erro na alteração",
@@ -230,91 +189,6 @@ export default function AdminDashboard() {
       p.user_email.toLowerCase().includes(query)
     );
   });
-
-  // Render password portal page if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6 bg-slate-950 text-white relative overflow-hidden">
-        {/* Glow Effects */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/25 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
-
-        <Card className="w-full max-w-md border border-white/10 bg-slate-900/60 backdrop-blur-2xl rounded-3xl p-8 space-y-6 shadow-2xl relative z-10">
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 animate-pulse">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-2xl font-black tracking-tight text-white mt-4">
-              Área Restrita
-            </h2>
-            <p className="text-xs font-semibold text-slate-400 max-w-[280px]">
-              Insira a senha administrativa para liberar o controle em tempo
-              real da plataforma.
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Key className="h-3 w-3 text-amber-500" />
-                <span>Senha de Acesso</span>
-              </label>
-              <Input
-                type="password"
-                placeholder="••••••••••••"
-                value={enteredPassword}
-                onChange={(e) => setEnteredPassword(e.target.value)}
-                className="bg-slate-950/65 border-white/10 text-white placeholder-slate-600 rounded-xl h-12 focus:ring-amber-500 focus:border-amber-500 font-semibold"
-              />
-            </div>
-
-            <div className="space-y-2 text-left">
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Shield className="h-3 w-3 text-violet-500" />
-                <span>Chave de Serviço Supabase (service_role)</span>
-              </label>
-              <Input
-                type="password"
-                placeholder="Cole a service_role key do Supabase..."
-                value={enteredServiceKey}
-                onChange={(e) => setEnteredServiceKey(e.target.value)}
-                className="bg-slate-950/65 border-white/10 text-white placeholder-slate-600 rounded-xl h-12 focus:ring-violet-500 focus:border-violet-500 font-semibold text-xs"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isCheckingPassword || !enteredPassword}
-              className="w-full h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 transition-all hover:scale-[1.01]"
-            >
-              {isCheckingPassword ? (
-                <span>Verificando...</span>
-              ) : (
-                <span>Entrar no Painel</span>
-              )}
-            </Button>
-          </form>
-        </Card>
-
-        {/* Premium Self-Contained Overlay Notification Toast */}
-        {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl border shadow-xl max-w-sm bg-red-500/10 border-red-500/20 text-red-500 animate-in slide-in-from-bottom-5">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
-              <div className="flex flex-col gap-0.5">
-                <h4 className="font-black text-xs uppercase tracking-wide">
-                  {toastMessage.title}
-                </h4>
-                <p className="text-[11px] font-bold text-foreground/80 leading-relaxed">
-                  {toastMessage.description}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="flex-1 space-y-8 p-6 md:p-10 max-w-7xl mx-auto animate-in fade-in duration-300">
@@ -650,11 +524,7 @@ export default function AdminDashboard() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() =>
-                    loadAdminData(
-                      sessionStorage.getItem("admin_auth_token") || ""
-                    )
-                  }
+                  onClick={() => loadAdminData()}
                   className="h-9 rounded-lg px-3 border-border hover:bg-muted/40"
                 >
                   <RotateCw className="h-4 w-4 text-muted-foreground" />
