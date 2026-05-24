@@ -42,15 +42,15 @@ interface ExportPDFButtonProps {
   tempoTotal: string;
 }
 
-// Utility to remove accents and non-ASCII chars safely
+// Utility to clean exotic characters while fully preserving Portuguese accents
 const sanitize = (text: string): string => {
   if (!text) return "";
   return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ç/g, "c")
-    .replace(/Ç/g, "C")
-    .replace(/[^\x00-\x7F]/g, "");
+    .replace(/[\u201c\u201d]/g, '"') // smart double quotes -> normal
+    .replace(/[\u2018\u2019]/g, "'") // smart single quotes -> normal
+    .replace(/[\u2013\u2014]/g, "-") // em/en dashes -> normal
+    .replace(/\u2026/g, "...") // ellipsis -> three periods
+    .replace(/[^\u0000-\u00FF]/g, ""); // keep all standard Latin-1 characters including accents
 };
 
 // Word wrapping utility for canvas drawing
@@ -306,9 +306,9 @@ export function ExportPDFButton({
       });
       yOffset -= 10;
 
-      // 4. AVALIACAO & TAREFA
+      // 4. AVALIAÇÃO & TAREFA
       addText(
-        "AVALIACAO FORMATIVA",
+        "AVALIAÇÃO FORMATIVA",
         40,
         12,
         HelveticaBold,
@@ -342,7 +342,7 @@ export function ExportPDFButton({
       ) {
         yOffset -= 10;
         addText(
-          "SUGESTOES DE ADAPTACAO (INCLUSAO)",
+          "SUGESTÕES DE ADAPTAÇÃO (INCLUSÃO)",
           40,
           12,
           HelveticaBold,
@@ -424,7 +424,7 @@ export function ActivityPDFButton({
     try {
       if (planTier !== "pro" && planTier !== "escola") {
         alert(
-          "A geracao de folhas de atividades praticas em PDF e exclusiva para assinantes do Plano Pro. Faca upgrade na aba Faturamento ou Precos!"
+          "A geração de folhas de atividades práticas em PDF é exclusiva para assinantes do Plano Pro. Faça o upgrade na aba Faturamento ou Preços!"
         );
         setIsGenerating(false);
         return;
@@ -564,7 +564,7 @@ export function ActivityPDFButton({
 
       // Instructions block
       addText(
-        `Instrucoes: ${activity.instrucoes}`,
+        `Instruções: ${activity.instrucoes}`,
         40,
         9.5,
         Helvetica,
@@ -577,7 +577,7 @@ export function ActivityPDFButton({
       activity.questoes.forEach((q: any) => {
         // Enunciado
         addText(
-          `Questao ${q.numero}:`,
+          `Questão ${q.numero}:`,
           40,
           10.5,
           HelveticaBold,
@@ -629,7 +629,7 @@ export function ActivityPDFButton({
       });
 
       // Footer
-      page.drawText(sanitize("Gerado por PlanejaAI  |  Folha de Exercicios"), {
+      page.drawText(sanitize("Gerado por PlanejaAI  |  Folha de Exercícios"), {
         x: 40,
         y: 30,
         size: 8,
