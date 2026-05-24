@@ -68,6 +68,20 @@ export default function SignupPage() {
     setError(null);
     setSuccess(null);
     try {
+      const { getSupabaseConfig } = await import("@/lib/supabase/client");
+      const config = getSupabaseConfig();
+      if (!config.isConfigured) {
+        // Simula cadastro em modo de demonstração off-line
+        setSuccess(
+          "Conta de Demonstração criada com sucesso! Redirecionando..."
+        );
+        setTimeout(() => {
+          router.push("/dashboard");
+          router.refresh();
+        }, 1500);
+        return;
+      }
+
       const { error: signUpError, data: authData } = await supabase.auth.signUp(
         {
           email: data.email,
@@ -99,7 +113,13 @@ export default function SignupPage() {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Ocorreu um erro ao criar sua conta.");
+      if (err.message === "Failed to fetch") {
+        setError(
+          "Erro de Conexão com o Supabase. Isso ocorre porque as variáveis 'NEXT_PUBLIC_SUPABASE_URL' e 'NEXT_PUBLIC_SUPABASE_ANON_KEY' ainda não foram salvas ou propagadas no painel da Vercel. Adicione estas chaves no painel da Vercel e faça um novo 'Redeploy' manual para atualizar a versão pública."
+        );
+      } else {
+        setError(err.message || "Ocorreu um erro ao criar sua conta.");
+      }
     } finally {
       setIsLoading(false);
     }
