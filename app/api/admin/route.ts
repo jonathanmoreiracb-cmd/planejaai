@@ -21,7 +21,10 @@ export async function GET(req: Request) {
 
     // Read environment variables dynamically at request runtime to bypass build-time static caching
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    const supabaseServiceRoleKey =
+      req.headers.get("x-supabase-service-key") ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      "";
 
     const isConfigured =
       supabaseUrl &&
@@ -186,7 +189,10 @@ export async function POST(req: Request) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    const supabaseServiceRoleKey =
+      req.headers.get("x-supabase-service-key") ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      "";
 
     const isConfigured =
       supabaseUrl &&

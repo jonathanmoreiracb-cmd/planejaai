@@ -71,6 +71,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [enteredPassword, setEnteredPassword] = useState("");
+  const [enteredServiceKey, setEnteredServiceKey] = useState("");
   const [isCheckingPassword, setIsCheckingPassword] = useState(false);
   const [searchUserQuery, setSearchUserQuery] = useState("");
   const [searchPlanQuery, setSearchPlanQuery] = useState("");
@@ -97,18 +98,22 @@ export default function AdminDashboard() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const loadAdminData = async (pwd: string) => {
+  const loadAdminData = async (pwd: string, serviceKey?: string) => {
     setIsLoading(true);
+    const activeServiceKey =
+      serviceKey || sessionStorage.getItem("admin_service_key") || "";
     try {
       const res = await fetch("/api/admin", {
         headers: {
           "x-admin-password": pwd,
+          "x-supabase-service-key": activeServiceKey,
         },
       });
 
       if (res.status === 401) {
         setIsAuthenticated(false);
         sessionStorage.removeItem("admin_auth_token");
+        sessionStorage.removeItem("admin_service_key");
         throw new Error("Senha administrativa incorreta.");
       }
 
@@ -147,8 +152,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const cachedToken = sessionStorage.getItem("admin_auth_token") || "";
+    const cachedServiceKey = sessionStorage.getItem("admin_service_key") || "";
     if (cachedToken) {
-      loadAdminData(cachedToken);
+      loadAdminData(cachedToken, cachedServiceKey);
     } else {
       setIsLoading(false);
     }
@@ -158,8 +164,11 @@ export default function AdminDashboard() {
     e.preventDefault();
     setIsCheckingPassword(true);
     try {
-      await loadAdminData(enteredPassword);
+      await loadAdminData(enteredPassword, enteredServiceKey);
       sessionStorage.setItem("admin_auth_token", enteredPassword);
+      if (enteredServiceKey) {
+        sessionStorage.setItem("admin_service_key", enteredServiceKey);
+      }
       toast({
         title: "Acesso Autorizado",
         description: "Conexão administrativa segura estabelecida com sucesso!",
@@ -174,11 +183,13 @@ export default function AdminDashboard() {
   const handleUpdatePlanTier = async (userId: string, newTier: string) => {
     try {
       const token = sessionStorage.getItem("admin_auth_token") || "";
+      const serviceKey = sessionStorage.getItem("admin_service_key") || "";
       const res = await fetch("/api/admin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-admin-password": token,
+          "x-supabase-service-key": serviceKey,
         },
         body: JSON.stringify({ userId, newTier }),
       });
@@ -254,6 +265,20 @@ export default function AdminDashboard() {
                 value={enteredPassword}
                 onChange={(e) => setEnteredPassword(e.target.value)}
                 className="bg-slate-950/65 border-white/10 text-white placeholder-slate-600 rounded-xl h-12 focus:ring-amber-500 focus:border-amber-500 font-semibold"
+              />
+            </div>
+
+            <div className="space-y-2 text-left">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Shield className="h-3 w-3 text-violet-500" />
+                <span>Chave de Serviço Supabase (service_role)</span>
+              </label>
+              <Input
+                type="password"
+                placeholder="Cole a service_role key do Supabase..."
+                value={enteredServiceKey}
+                onChange={(e) => setEnteredServiceKey(e.target.value)}
+                className="bg-slate-950/65 border-white/10 text-white placeholder-slate-600 rounded-xl h-12 focus:ring-violet-500 focus:border-violet-500 font-semibold text-xs"
               />
             </div>
 
