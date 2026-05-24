@@ -4,8 +4,21 @@ import { createClient } from "@supabase/supabase-js";
 // Force Next.js to treat this route as fully dynamic on every request
 export const dynamic = "force-dynamic";
 
+const verifyAdminPassword = (req: Request): boolean => {
+  const headerPassword = req.headers.get("x-admin-password");
+  const correctPassword = process.env.ADMIN_PASSWORD || "PlanejaAI2026!";
+  return headerPassword === correctPassword;
+};
+
 export async function GET(req: Request) {
   try {
+    if (!verifyAdminPassword(req)) {
+      return NextResponse.json(
+        { error: "Acesso administrativo negado. Senha incorreta." },
+        { status: 401 }
+      );
+    }
+
     // Read environment variables dynamically at request runtime to bypass build-time static caching
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -164,6 +177,13 @@ export async function GET(req: Request) {
 // POST endpoint to manually upgrade/change user subscription plan tiers
 export async function POST(req: Request) {
   try {
+    if (!verifyAdminPassword(req)) {
+      return NextResponse.json(
+        { error: "Acesso administrativo negado. Senha incorreta." },
+        { status: 401 }
+      );
+    }
+
     const { userId, newTier } = await req.json();
 
     if (!userId || !newTier) {
