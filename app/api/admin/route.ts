@@ -33,10 +33,18 @@ export async function GET(req: Request) {
       supabaseServiceRoleKey !== "null";
 
     if (!isConfigured) {
+      const foundKeys = Object.keys(process.env).filter(
+        (k) =>
+          k.includes("SUPABASE") ||
+          k.includes("ROLE") ||
+          k.includes("SERVICE") ||
+          k.includes("ANON")
+      );
       return NextResponse.json(
         {
-          error:
-            "Configuração pendente: A variável de ambiente 'SUPABASE_SERVICE_ROLE_KEY' não está configurada no servidor. Adicione-a na Vercel para ler os dados reais do banco.",
+          error: `Configuração pendente: A variável de ambiente 'SUPABASE_SERVICE_ROLE_KEY' não está configurada no servidor. Chaves de ambiente detectadas: ${JSON.stringify(
+            foundKeys
+          )}.`,
         },
         { status: 500 }
       );
