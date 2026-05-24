@@ -1,24 +1,21 @@
 import { jsonrepair } from "jsonrepair";
 
 /**
- * Extract and parse JSON content safely from Gemini raw text responses.
- * Uses the industry-standard 'jsonrepair' engine to fix malformed JSON on the fly,
- * including unescaped quotes, literal newlines, trailing commas, and missing delimiters.
+ * Generic clean & repair parse function that returns the raw JSON object/array safely.
+ * Handles markdown code fences, unescaped quotes, trailing commas, and incomplete blocks.
  */
-export function parseGeminiResponse(text: string): any {
+export function parseGeminiJSON(text: string): any {
   if (!text) {
     throw new Error("Resposta da IA está vazia.");
   }
 
   let cleanText = text.trim();
 
-  // Tier 1: Try parsing the direct raw response (instant & safe for native JSON responses)
+  // Tier 1: Try direct parsing
   try {
-    return normalizeLessonPlan(JSON.parse(cleanText));
+    return JSON.parse(cleanText);
   } catch (initialErr) {
-    console.warn("Direct JSON parse failed. Trying Tier 2 (jsonrepair)...");
-
-    // Tier 2: Clean markdown code fences if present
+    // Tier 2: Strip code fences and try jsonrepair
     if (cleanText.includes("```json")) {
       const parts = cleanText.split("```json");
       const jsonPart = parts[parts.length - 1].split("```")[0];
@@ -31,13 +28,9 @@ export function parseGeminiResponse(text: string): any {
 
     try {
       const repaired = jsonrepair(cleanText);
-      return normalizeLessonPlan(JSON.parse(repaired));
+      return JSON.parse(repaired);
     } catch (repairErr) {
-      console.warn(
-        "Direct jsonrepair failed. Trying Tier 3 (outermost brace slicing + jsonrepair)..."
-      );
-
-      // Tier 3: Locate the outermost curly braces to extract strictly the JSON object
+      // Tier 3: Locate outermost curly braces to isolate strictly the JSON content
       const firstBraceIndex = cleanText.indexOf("{");
       const lastBraceIndex = cleanText.lastIndexOf("}");
 
@@ -47,7 +40,10 @@ export function parseGeminiResponse(text: string): any {
           cleanText
         );
         throw new Error(
-          `Não foi possível encontrar a estrutura JSON de chaves na resposta. Conteúdo retornado: "${cleanText.slice(0, 150)}..."`
+          `Não foi possível encontrar a estrutura JSON de chaves na resposta. Conteúdo retornado: "${cleanText.slice(
+            0,
+            150
+          )}..."`
         );
       }
 
@@ -55,14 +51,30 @@ export function parseGeminiResponse(text: string): any {
 
       try {
         const repairedSlice = jsonrepair(jsonString);
-        return normalizeLessonPlan(JSON.parse(repairedSlice));
+        return JSON.parse(repairedSlice);
       } catch (sliceErr: any) {
         throw new Error(
-          `Erro ao estruturar dados do plano de aula: ${sliceErr.message}`
+          `Erro ao estruturar dados JSON extraídos: ${sliceErr.message}`
         );
       }
     }
   }
+}
+
+/**
+ * Parses a raw Gemini text response and normalizes it as a Lesson Plan.
+ */
+export function parseGeminiResponse(text: string): any {
+  const parsed = parseGeminiJSON(text);
+  return normalizeLessonPlan(parsed);
+}
+
+/**
+ * Parses a raw Gemini text response and normalizes it as a School Activity / Worksheet.
+ */
+export function parseGeminiActivity(text: string): any {
+  const parsed = parseGeminiJSON(text);
+  return normalizeActivity(parsed);
 }
 
 /**
@@ -155,6 +167,63 @@ export function normalizeLessonPlan(plan: any): any {
           {
             para: "Ambiente sem tecnologia",
             adaptacao: "Alternativa offline para os mesmos objetivos.",
+          },
+        ],
+  };
+
+  return normalized;
+}
+
+/**
+ * Normalizes and hydrates parsed worksheets to prevent missing fields or truncated options.
+ */
+export function normalizeActivity(activity: any): any {
+  if (!activity || typeof activity !== "object") return activity;
+
+  const normalized = {
+    titulo: activity.titulo || "Folha de Exercícios",
+    instrucoes:
+      activity.instrucoes ||
+      "Leia as perguntas com bastante atenção e responda da melhor forma possível.",
+    questoes: Array.isArray(activity.questoes)
+      ? activity.questoes.map((q: any, idx: number) => {
+          const tipo = q?.tipo || "dissertativa";
+          const enunciado =
+            q?.enunciado ||
+            "Responda à questão proposta relacionando o tema com o seu cotidiano.";
+          const numero = q?.numero || idx + 1;
+
+          if (tipo === "multipla_escolha") {
+            const opcoes = Array.isArray(q?.opcoes)
+              ? q.opcoes
+              : [
+                  "A) Alternativa de resposta 1",
+                  "B) Alternativa de resposta 2",
+                  "C) Alternativa de resposta 3",
+                  "D) Alternativa de resposta 4",
+                ];
+            return {
+              numero,
+              tipo,
+              enunciado,
+              opcoes,
+            };
+          } else {
+            return {
+              numero,
+              tipo,
+              enunciado,
+              linhas_para_resposta: q?.linhas_para_resposta || 5,
+            };
+          }
+        })
+      : [
+          {
+            numero: 1,
+            tipo: "dissertativa",
+            enunciado:
+              "Escreva uma breve explicação resumindo os principais pontos que você compreendeu sobre este tema.",
+            linhas_para_resposta: 6,
           },
         ],
   };

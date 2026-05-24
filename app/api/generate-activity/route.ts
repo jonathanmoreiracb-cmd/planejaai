@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGeminiModel } from "@/lib/gemini/client";
 import { GENERATE_ACTIVITY_PROMPT } from "@/lib/gemini/prompts";
-import { parseGeminiResponse } from "@/lib/gemini/parser";
+import { parseGeminiActivity } from "@/lib/gemini/parser";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     });
 
     const responseText = result.response.text();
-    const activityData = parseGeminiResponse(responseText);
+    const activityData = parseGeminiActivity(responseText);
 
     if (!activityData || !activityData.titulo || !activityData.questoes) {
       throw new Error(
