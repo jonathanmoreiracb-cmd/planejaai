@@ -236,18 +236,27 @@ export async function POST(req: Request) {
 
     let mutationError;
     if (existingSub) {
-      // If a row exists, perform an update on that specific row (this completely avoids touching the ID column!)
+      // If a row exists, perform an update (providing dummy values for stripe fields in case they have NOT NULL constraints)
       const { error: updateError } = await supabaseAdmin
         .from("subscriptions")
         .update({
           plan_tier: newTier,
           status: newTier === "free" ? "inactive" : "active",
+          stripe_customer_id:
+            newTier === "free" ? "manual_free" : "manual_cus_" + randomUUID(),
+          stripe_subscription_id:
+            newTier === "free" ? "manual_free" : "manual_sub_" + randomUUID(),
+          price_id: newTier === "free" ? "manual_free" : "manual_price",
+          current_period_end:
+            newTier === "free"
+              ? new Date().toISOString()
+              : "2099-12-31T23:59:59.000Z",
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", userId);
       mutationError = updateError;
     } else {
-      // If no row exists, perform an insert and explicitly supply a server-generated random UUID as the primary key ID!
+      // If no row exists, perform an insert and explicitly supply all required columns to satisfy strict DB schemas
       const { error: insertError } = await supabaseAdmin
         .from("subscriptions")
         .insert({
@@ -255,6 +264,15 @@ export async function POST(req: Request) {
           user_id: userId,
           plan_tier: newTier,
           status: newTier === "free" ? "inactive" : "active",
+          stripe_customer_id:
+            newTier === "free" ? "manual_free" : "manual_cus_" + randomUUID(),
+          stripe_subscription_id:
+            newTier === "free" ? "manual_free" : "manual_sub_" + randomUUID(),
+          price_id: newTier === "free" ? "manual_free" : "manual_price",
+          current_period_end:
+            newTier === "free"
+              ? new Date().toISOString()
+              : "2099-12-31T23:59:59.000Z",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
