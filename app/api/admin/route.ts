@@ -246,7 +246,6 @@ export async function POST(req: Request) {
             newTier === "free" ? "manual_free" : "manual_cus_" + randomUUID(),
           stripe_subscription_id:
             newTier === "free" ? "manual_free" : "manual_sub_" + randomUUID(),
-          price_id: newTier === "free" ? "manual_free" : "manual_price",
           current_period_end:
             newTier === "free"
               ? new Date().toISOString()
@@ -268,7 +267,6 @@ export async function POST(req: Request) {
             newTier === "free" ? "manual_free" : "manual_cus_" + randomUUID(),
           stripe_subscription_id:
             newTier === "free" ? "manual_free" : "manual_sub_" + randomUUID(),
-          price_id: newTier === "free" ? "manual_free" : "manual_price",
           current_period_end:
             newTier === "free"
               ? new Date().toISOString()
