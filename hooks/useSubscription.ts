@@ -89,11 +89,13 @@ export function useSubscription() {
 
         if (active) {
           if (subData) {
+            const mappedTier =
+              subData.plan_tier === "school" ? "escola" : subData.plan_tier;
             setSubscription({
               id: subData.id,
               user_id: subData.user_id,
               status: subData.status,
-              plan_tier: subData.plan_tier as "free" | "pro" | "escola",
+              plan_tier: mappedTier as "free" | "pro" | "escola",
               current_period_end: subData.current_period_end,
             });
           } else {

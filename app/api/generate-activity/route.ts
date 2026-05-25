@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       planTier = subData?.plan_tier || "free";
     }
 
-    if (planTier !== "pro" && planTier !== "escola") {
+    if (planTier !== "pro" && planTier !== "escola" && planTier !== "school") {
       return NextResponse.json(
         {
           error:
