@@ -244,12 +244,6 @@ export async function POST(req: Request) {
           status: newTier === "free" ? "inactive" : "active",
           stripe_customer_id:
             newTier === "free" ? "manual_free" : "manual_cus_" + randomUUID(),
-          stripe_subscription_id:
-            newTier === "free" ? "manual_free" : "manual_sub_" + randomUUID(),
-          current_period_end:
-            newTier === "free"
-              ? new Date().toISOString()
-              : "2099-12-31T23:59:59.000Z",
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", userId);
@@ -265,12 +259,6 @@ export async function POST(req: Request) {
           status: newTier === "free" ? "inactive" : "active",
           stripe_customer_id:
             newTier === "free" ? "manual_free" : "manual_cus_" + randomUUID(),
-          stripe_subscription_id:
-            newTier === "free" ? "manual_free" : "manual_sub_" + randomUUID(),
-          current_period_end:
-            newTier === "free"
-              ? new Date().toISOString()
-              : "2099-12-31T23:59:59.000Z",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
