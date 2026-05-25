@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 
 // Force Next.js to treat this route as fully dynamic on every request
 export const dynamic = "force-dynamic";
@@ -222,19 +223,46 @@ export async function POST(req: Request) {
       },
     });
 
-    // Try upserting or updating the subscriptions record using service role client
-    const { error } = await supabaseAdmin.from("subscriptions").upsert(
-      {
-        user_id: userId,
-        plan_tier: newTier,
-        status: newTier === "free" ? "inactive" : "active",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
+    // Check if the user already has a subscription row in the database
+    const { data: existingSub, error: fetchError } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    if (error) {
-      throw error;
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    let mutationError;
+    if (existingSub) {
+      // If a row exists, perform an update on that specific row (this completely avoids touching the ID column!)
+      const { error: updateError } = await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          plan_tier: newTier,
+          status: newTier === "free" ? "inactive" : "active",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+      mutationError = updateError;
+    } else {
+      // If no row exists, perform an insert and explicitly supply a server-generated random UUID as the primary key ID!
+      const { error: insertError } = await supabaseAdmin
+        .from("subscriptions")
+        .insert({
+          id: randomUUID(),
+          user_id: userId,
+          plan_tier: newTier,
+          status: newTier === "free" ? "inactive" : "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      mutationError = insertError;
+    }
+
+    if (mutationError) {
+      throw mutationError;
     }
 
     return NextResponse.json({

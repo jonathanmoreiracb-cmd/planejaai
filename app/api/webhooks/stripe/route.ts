@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { randomUUID } from "crypto";
 
 const stripe = new Stripe(
   process.env.STRIPE_SECRET_KEY || "sk_test_placeholder",
@@ -66,20 +67,53 @@ export async function POST(req: Request) {
           subscriptionId
         )) as any;
 
-        const { error: upsertErr } = await supabaseAdmin
+        // Check if subscription record already exists in the database
+        const { data: existingSub, error: fetchErr } = await supabaseAdmin
           .from("subscriptions")
-          .upsert({
-            user_id: metadata.userId,
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: subscriptionId,
-            status: subscription.status,
-            price_id: subscription.items.data[0].price.id,
-            plan_tier: metadata.planTier,
-            current_period_end: new Date(
-              subscription.current_period_end * 1000
-            ).toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+          .select("id")
+          .eq("user_id", metadata.userId)
+          .maybeSingle();
+
+        if (fetchErr) throw fetchErr;
+
+        let upsertErr;
+        if (existingSub) {
+          // If a record already exists, update it to keep the original ID completely intact
+          const { error: updateErr } = await supabaseAdmin
+            .from("subscriptions")
+            .update({
+              stripe_customer_id: session.customer as string,
+              stripe_subscription_id: subscriptionId,
+              status: subscription.status,
+              price_id: subscription.items.data[0].price.id,
+              plan_tier: metadata.planTier,
+              current_period_end: new Date(
+                subscription.current_period_end * 1000
+              ).toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", metadata.userId);
+          upsertErr = updateErr;
+        } else {
+          // If no record exists, insert it with a server-generated random UUID
+          const { error: insertErr } = await supabaseAdmin
+            .from("subscriptions")
+            .insert({
+              id: randomUUID(),
+              user_id: metadata.userId,
+              stripe_customer_id: session.customer as string,
+              stripe_subscription_id: subscriptionId,
+              status: subscription.status,
+              price_id: subscription.items.data[0].price.id,
+              plan_tier: metadata.planTier,
+              current_period_end: new Date(
+                subscription.current_period_end * 1000
+              ).toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          upsertErr = insertErr;
+        }
 
         if (upsertErr) throw upsertErr;
         break;
