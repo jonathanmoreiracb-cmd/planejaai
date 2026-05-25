@@ -11,6 +11,12 @@ import {
   ListTodo,
   BookOpen,
   Lightbulb,
+  Undo2,
+  Accessibility,
+  Brain,
+  Puzzle,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +25,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -50,13 +55,17 @@ interface PlanViewProps {
 }
 
 export function PlanView({ plan }: PlanViewProps) {
+  const [currentPlan, setCurrentPlan] = useState<Plan>(plan);
+  const [originalPlan] = useState<Plan>(plan);
+  const [isAdapting, setIsAdapting] = useState(false);
+  const [activeProfile, setActiveProfile] = useState<string | null>(null);
   const [activeWeek, setActiveWeek] = useState<number>(1);
   const [completedTasks, setCompletedTasks] = useState<Record<string, boolean>>(
     {}
   );
 
   // Calculate overall plan progress
-  const totalTasks = plan.weeks.reduce(
+  const totalTasks = currentPlan.weeks.reduce(
     (acc, week) =>
       acc + week.days.reduce((dAcc, day) => dAcc + day.tasks.length, 0),
     0
@@ -78,9 +87,53 @@ export function PlanView({ plan }: PlanViewProps) {
     }));
   };
 
+  const handleAdaptPlan = async (
+    profile: "tea" | "tdah" | "dislexia" | "avancado"
+  ) => {
+    setIsAdapting(true);
+    setActiveProfile(profile);
+    try {
+      const res = await fetch("/api/adapt-plan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan: originalPlan, profile }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Erro ao adaptar plano de aula.");
+      }
+      setCurrentPlan(data.plan);
+    } catch (err: any) {
+      console.error(err);
+      alert(
+        err.message ||
+          "Houve um erro ao adaptar seu plano para inclusão. Tente novamente."
+      );
+      setActiveProfile(null);
+    } finally {
+      setIsAdapting(false);
+    }
+  };
+
+  const handleRestoreOriginal = () => {
+    setCurrentPlan(originalPlan);
+    setActiveProfile(null);
+  };
+
+  const sanitize = (text: string): string => {
+    if (!text) return "";
+    return text
+      .replace(/[\u201c\u201d]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u2013\u2014]/g, "-")
+      .replace(/\u2026/g, "...")
+      .replace(/[^\u0000-\u00FF]/g, "");
+  };
+
   const handleDownloadPDF = async () => {
     try {
-      // Create a new PDF document
       const pdfDoc = await PDFDocument.create();
       let page = pdfDoc.addPage([595.276, 841.89]); // A4 Size
       const { width, height } = page.getSize();
@@ -90,7 +143,6 @@ export function PlanView({ plan }: PlanViewProps) {
 
       let yOffset = height - 50;
 
-      // Helper to add text and manage page breaks
       const addText = (
         text: string,
         x: number,
@@ -99,11 +151,12 @@ export function PlanView({ plan }: PlanViewProps) {
         colorRGB = rgb(0.1, 0.1, 0.1),
         spacing = 20
       ) => {
+        const sanitized = sanitize(text);
         if (yOffset < 60) {
           page = pdfDoc.addPage([595.276, 841.89]);
           yOffset = height - 50;
         }
-        page.drawText(text, {
+        page.drawText(sanitized, {
           x,
           y: yOffset,
           size: fontSize,
@@ -122,55 +175,59 @@ export function PlanView({ plan }: PlanViewProps) {
         color: rgb(0.388, 0.4, 0.945), // #6366f1
       });
 
-      page.drawText("PlanejaAI - Plano de Ação", {
+      page.drawText(sanitize("PlanejaAI - Acessibilidade & Inclusão"), {
         x: 40,
         y: height - 48,
-        size: 24,
+        size: 20,
         font: HelveticaBold,
         color: rgb(1, 1, 1),
       });
 
       yOffset = height - 110;
 
-      // Title & Intro
-      addText(plan.title, 40, 18, HelveticaBold, rgb(0.1, 0.1, 0.15), 25);
+      addText(
+        currentPlan.title,
+        40,
+        16,
+        HelveticaBold,
+        rgb(0.1, 0.1, 0.15),
+        25
+      );
 
-      // Wrap description text roughly
-      const descLines = plan.description.match(/.{1,70}(\s|$)/g) || [
-        plan.description,
+      const descLines = currentPlan.description.match(/.{1,70}(\s|$)/g) || [
+        currentPlan.description,
       ];
       descLines.forEach((line) => {
         addText(line.trim(), 40, 10, Helvetica, rgb(0.3, 0.3, 0.3), 15);
       });
       yOffset -= 10;
 
-      // Iterate weeks
-      plan.weeks.forEach((week) => {
+      currentPlan.weeks.forEach((week) => {
         addText(
           `Semana ${week.weekNumber}: ${week.theme}`,
           40,
-          14,
+          13,
           HelveticaBold,
           rgb(0.957, 0.247, 0.369),
           20
-        ); // #f43f5e
+        );
 
         week.days.forEach((day) => {
           addText(
             `Dia ${day.day}: ${day.topic} (${day.duration})`,
             50,
-            11,
+            10.5,
             HelveticaBold,
             rgb(0.15, 0.15, 0.2),
             16
           );
 
           day.tasks.forEach((task) => {
-            const taskText = `- [ ] ${task}`;
+            const taskText = `- ${task}`;
             const taskLines = taskText.match(/.{1,65}(\s|$)/g) || [taskText];
             taskLines.forEach((line, index) => {
               addText(
-                index === 0 ? line.trim() : `     ${line.trim()}`,
+                index === 0 ? line.trim() : `    ${line.trim()}`,
                 65,
                 9,
                 Helvetica,
@@ -184,31 +241,29 @@ export function PlanView({ plan }: PlanViewProps) {
         yOffset -= 10;
       });
 
-      // Tips Section
-      if (plan.tips && plan.tips.length > 0) {
+      if (currentPlan.tips && currentPlan.tips.length > 0) {
         addText(
-          "Dicas Práticas para o Sucesso:",
+          "Dicas de Aplicação Pedagógica Inclusiva:",
           40,
-          12,
+          11.5,
           HelveticaBold,
           rgb(0.388, 0.4, 0.945),
           18
         );
-        plan.tips.forEach((tip) => {
+        currentPlan.tips.forEach((tip) => {
           const tipText = `• ${tip}`;
           const tipLines = tipText.match(/.{1,70}(\s|$)/g) || [tipText];
           tipLines.forEach((line) => {
-            addText(line.trim(), 50, 9.5, Helvetica, rgb(0.3, 0.3, 0.3), 14);
+            addText(line.trim(), 50, 9, Helvetica, rgb(0.3, 0.3, 0.3), 14);
           });
         });
       }
 
-      // Save and trigger download
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `${plan.title.replace(/\s+/g, "_")}.pdf`;
+      link.download = `${currentPlan.title.replace(/\s+/g, "_")}.pdf`;
       link.click();
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
@@ -228,28 +283,45 @@ export function PlanView({ plan }: PlanViewProps) {
                 <Badge className="bg-primary hover:bg-primary text-white border-none font-semibold">
                   Inteligência Artificial
                 </Badge>
+                {activeProfile && (
+                  <Badge className="bg-indigo-600 text-white border-none font-semibold">
+                    Adaptado: {activeProfile.toUpperCase()}
+                  </Badge>
+                )}
                 <Badge
                   variant="outline"
                   className="text-secondary border-secondary/30"
                 >
-                  {plan.weeks.length} Semanas
+                  {currentPlan.weeks.length} Semanas
                 </Badge>
               </div>
               <CardTitle className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-                {plan.title}
+                {currentPlan.title}
               </CardTitle>
             </div>
 
-            <Button
-              onClick={handleDownloadPDF}
-              className="bg-secondary hover:bg-secondary/90 text-white font-semibold flex items-center gap-2 self-start sm:self-auto transition-all"
-            >
-              <Download className="h-4 w-4" />
-              Baixar em PDF
-            </Button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {activeProfile && (
+                <Button
+                  onClick={handleRestoreOriginal}
+                  variant="outline"
+                  className="border-primary/30 text-primary hover:bg-primary/5 font-semibold flex items-center gap-1.5 transition-all"
+                >
+                  <Undo2 className="h-4 w-4" />
+                  Restaurar Original
+                </Button>
+              )}
+              <Button
+                onClick={handleDownloadPDF}
+                className="bg-secondary hover:bg-secondary/90 text-white font-semibold flex items-center gap-2 transition-all"
+              >
+                <Download className="h-4 w-4" />
+                Baixar em PDF
+              </Button>
+            </div>
           </div>
           <CardDescription className="text-sm sm:text-base text-muted-foreground pt-2">
-            {plan.description}
+            {currentPlan.description}
           </CardDescription>
         </CardHeader>
 
@@ -282,11 +354,124 @@ export function PlanView({ plan }: PlanViewProps) {
         </CardContent>
       </Card>
 
+      {/* Magical 1-Click Inclusion & Adaptation Panel */}
+      <Card className="border-border/60 bg-gradient-to-br from-indigo-50/50 via-white to-pink-50/50 dark:from-slate-900 dark:to-slate-900 shadow-md">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400">
+              <Accessibility className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold text-foreground">
+                Assistente de Inclusão e Acessibilidade (AEE)
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Adapte as atividades metodológicas deste plano de ação com 1
+                clique para apoiar alunos com diferentes perfis cognitivos.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button
+              onClick={() => handleAdaptPlan("tea")}
+              disabled={isAdapting}
+              className={`p-3 rounded-xl border text-left flex flex-col justify-between h-24 transition-all duration-300 relative overflow-hidden ${
+                activeProfile === "tea"
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                  : "bg-background border-border/80 hover:border-indigo-400 hover:bg-indigo-50/30 text-foreground"
+              }`}
+            >
+              <Puzzle className="h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold">Autismo (TEA)</p>
+                <p
+                  className={`text-[9px] mt-0.5 leading-tight ${activeProfile === "tea" ? "text-indigo-100" : "text-muted-foreground"}`}
+                >
+                  Rotina previsível e pequenos passos visuais.
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleAdaptPlan("tdah")}
+              disabled={isAdapting}
+              className={`p-3 rounded-xl border text-left flex flex-col justify-between h-24 transition-all duration-300 relative overflow-hidden ${
+                activeProfile === "tdah"
+                  ? "bg-rose-500 border-rose-500 text-white shadow-md"
+                  : "bg-background border-border/80 hover:border-rose-400 hover:bg-rose-50/30 text-foreground"
+              }`}
+            >
+              <Brain className="h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold">Foco / TDAH</p>
+                <p
+                  className={`text-[9px] mt-0.5 leading-tight ${activeProfile === "tdah" ? "text-rose-100" : "text-muted-foreground"}`}
+                >
+                  Quebras dinâmicas e tarefas práticas de ação.
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleAdaptPlan("dislexia")}
+              disabled={isAdapting}
+              className={`p-3 rounded-xl border text-left flex flex-col justify-between h-24 transition-all duration-300 relative overflow-hidden ${
+                activeProfile === "dislexia"
+                  ? "bg-amber-500 border-amber-500 text-white shadow-md"
+                  : "bg-background border-border/80 hover:border-amber-400 hover:bg-amber-50/30 text-foreground"
+              }`}
+            >
+              <BookOpen className="h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold">Dislexia / Leitura</p>
+                <p
+                  className={`text-[9px] mt-0.5 leading-tight ${activeProfile === "dislexia" ? "text-amber-100" : "text-muted-foreground"}`}
+                >
+                  Redução de escrita densa e foco em áudio/visual.
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleAdaptPlan("avancado")}
+              disabled={isAdapting}
+              className={`p-3 rounded-xl border text-left flex flex-col justify-between h-24 transition-all duration-300 relative overflow-hidden ${
+                activeProfile === "avancado"
+                  ? "bg-emerald-600 border-emerald-600 text-white shadow-md"
+                  : "bg-background border-border/80 hover:border-emerald-400 hover:bg-emerald-50/30 text-foreground"
+              }`}
+            >
+              <Sparkles className="h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold">Superdotação</p>
+                <p
+                  className={`text-[9px] mt-0.5 leading-tight ${activeProfile === "avancado" ? "text-emerald-100" : "text-muted-foreground"}`}
+                >
+                  Desafios cognitivos e investigações extras.
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {isAdapting && (
+            <div className="mt-4 flex items-center justify-center gap-2 p-3 bg-indigo-50/40 dark:bg-slate-800 rounded-xl border border-indigo-100/50 animate-pulse">
+              <Loader2 className="h-4.5 w-4.5 animate-spin text-indigo-600" />
+              <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                A IA está adaptando este plano pedagógico para o perfil{" "}
+                {activeProfile?.toUpperCase()}...
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Week Selector / Navigation Tabs */}
       <div className="flex flex-col md:flex-row gap-6">
         {/* Week sidebar selector */}
         <div className="flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 shrink-0 md:w-56 border-b md:border-b-0 md:border-r border-border md:pr-4">
-          {plan.weeks.map((week) => (
+          {currentPlan.weeks.map((week) => (
             <button
               key={week.weekNumber}
               onClick={() => setActiveWeek(week.weekNumber)}
@@ -309,7 +494,7 @@ export function PlanView({ plan }: PlanViewProps) {
 
         {/* Active Week Details */}
         <div className="flex-1 space-y-6">
-          {plan.weeks.map((week) => {
+          {currentPlan.weeks.map((week) => {
             if (week.weekNumber !== activeWeek) return null;
             return (
               <div
@@ -393,15 +578,15 @@ export function PlanView({ plan }: PlanViewProps) {
           })}
 
           {/* Practical Tips */}
-          {plan.tips && plan.tips.length > 0 && (
+          {currentPlan.tips && currentPlan.tips.length > 0 && (
             <Alert className="border-primary/20 bg-primary/5 text-foreground rounded-2xl p-5">
               <Lightbulb className="h-5 w-5 text-primary" />
               <AlertTitle className="text-base font-bold text-primary flex items-center gap-1.5">
-                Dicas de Produtividade
+                Dicas de Aplicação Pedagógica
               </AlertTitle>
               <AlertDescription className="mt-2">
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  {plan.tips.map((tip, idx) => (
+                  {currentPlan.tips.map((tip, idx) => (
                     <li key={idx} className="flex gap-2">
                       <span className="text-primary font-bold">•</span>
                       <span>{tip}</span>
